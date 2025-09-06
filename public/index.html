@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Converter</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="login.js" defer></script>
+    <script src="upload.js" defer></script>
+    <script src="convert.js" defer></script>
+    <script src="download.js" defer></script>
+    <script src="logout.js" defer></script>
+</head>
+
+<body>
+    <h1 style="text-align: center;">Login</h1>
+    <div class="login-container">
+        <form id="loginForm" action="/login" method="post">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password">
+            <button type="submit">Login</button>
+        </form>
+        <div id="message"></div>
+        <div id="currentUser"></div>
+    </div>
+    <!-- File Upload Section -->
+    <div class="section">
+        <h2>📁 Upload File</h2>
+        <div class="file-upload-area" id="uploadArea">
+            <p>Drag and drop your file here or click to browse</p>
+            <p><strong>Supported formats:</strong> HTML, DOCX, MD</p>
+            <p><strong>Maximum size:</strong> 100MB</p>
+            <input type="file" id="fileInput" class="file-input" accept=".html,.docx,.md">
+            <button class="upload-btn" onclick="openFilePicker()">
+                Choose File
+            </button>
+        </div>
+
+        <div class="file-info" id="fileInfo" style="display: none;">
+            <h4>Selected File:</h4>
+            <p><strong>Name:</strong> <span id="fileName"></span></p>
+            <p><strong>Size:</strong> <span id="fileSize"></span></p>
+            <p><strong>Type:</strong> <span id="fileType"></span></p>
+        </div>
+
+        <button class="upload-btn" id="uploadBtn" onclick="upload()" disabled>
+            Upload File
+        </button>
+
+        <div id="uploadMessage" class="message-area"></div>
+    </div>
+
+    <!-- File Conversion Section -->
+    <div class="section">
+        <h2>🔄 Convert to PDF</h2>
+        <p>Once you've uploaded a file, you can convert it to PDF format.</p>
+                 <button class="convert-btn" id="convertBtn" disabled>
+             Convert to PDF
+         </button>
+
+        <div class="progress-bar" id="progressBar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <div id="convertMessage"></div>
+    </div>
+
+    <!-- Download Section -->
+    <div class="section download-section">
+        <h2>⬇️ Download PDF</h2>
+        <div id="downloadLink"></div>
+        <div id="downloadMessage"></div>
+    </div>
+    <!-- Jobs section -->
+    <div id="jobs">    
+    </div>
+    <!-- Jobs and users display area -->
+    <div id="InformationDisplayArea">
+
+    </div>
+</body>
+<script>
+</script>
+</html>

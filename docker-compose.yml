@@ -1,0 +1,7 @@
+version: '3.9'
+
+services:
+  app:
+    image: 901444280953.dkr.ecr.ap-southeast-2.amazonaws.com/n11795611-abhinavgandham-cab432-app:latest
+    ports:
+      - "3000:3000"

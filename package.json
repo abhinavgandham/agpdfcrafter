@@ -1,0 +1,40 @@
+{
+  "name": "cab432restapiproject",
+  "version": "1.0.0",
+  "description": "File converter application",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abhinavgandham/cab432RestAPIProject.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/abhinavgandham/cab432RestAPIProject/issues"
+  },
+  "homepage": "https://github.com/abhinavgandham/cab432RestAPIProject#readme",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "csv-parser": "^3.2.0",
+    "docx-pdf": "^0.0.1",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "fs": "^0.0.1-security",
+    "js-yaml": "^4.1.0",
+    "json2csv": "^6.0.0-alpha.2",
+    "jsonwebtoken": "^9.0.2",
+    "mammoth": "^1.10.0",
+    "marked": "^16.1.2",
+    "multer": "^2.0.2",
+    "path": "^0.12.7",
+    "puppeteer": "^24.16.1",
+    "sqlite3": "^5.1.7",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
+  }
+}

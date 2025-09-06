@@ -1,0 +1,41 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deploy Ubuntu EC2 with Docker Compose pulling containers from ECR
+
+Resources:
+  MyEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.small
+      ImageId: ami-0abcdef1234567890
+      IamInstanceProfile: AmazonSSMRoleForInstancesQuickSetup
+      SecurityGroupIds:
+        - sg-032bd1ff8cf77dbb9
+      SubnetId: subnet-075811427d5564cf9
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          # Update and install Docker
+          apt-get update -y
+          apt-get install -y docker.io docker-compose
+          systemctl start docker
+          systemctl enable docker
+          usermod -aG docker ubuntu
+
+          # Login to ECR
+          aws ecr get-login-password --region ap-southeast-2 | docker login --username AWS --password-stdin 901444280953.dkr.ecr.ap-southeast-2.amazonaws.com
+
+
+          # Create app directory
+          mkdir -p /home/ubuntu/myapp
+          cd /home/ubuntu/myapp
+
+          # Create docker-compose.yml using echo
+          echo "version: '3'
+            services:
+                app:
+                image: 901444280953.dkr.ecr.ap-southeast-2.amazonaws.com/n11795611-abhinavgandham-cab432-app:latest
+                ports:
+                - '3000:3000'" > /home/ubuntu/myapp/docker-compose.yml
+
+                    # Run Docker Compose
+                    docker-compose up -d
