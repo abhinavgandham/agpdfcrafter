@@ -17,8 +17,11 @@ RUN apk add --no-cache \
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
+# Set AWS profile for SSO credentials
+ENV AWS_PROFILE=CAB432-STUDENT-901444280953
+
 COPY package*.json ./
 RUN npm ci --only=production
 COPY . .
 EXPOSE 3000
-CMD ["node", "app.js"]
+CMD ["npm", "start"]
