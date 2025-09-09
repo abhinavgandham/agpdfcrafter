@@ -5,6 +5,9 @@ const mammoth = require("mammoth");
 const { parse } = require("json2csv");
 const sqlite3 = require("sqlite3").verbose();
 const csv = require("csv-parser");
+const { 
+  S3Client, PutObjectCommand
+} = require("@aws-sdk/client-s3");
 
 // Load jobs with safety check
 let jobs;
@@ -347,6 +350,22 @@ const parseCSVIntoDatabase = () => {
     });
 };
 
+const pushPdfDownloadUrlToS3 = async (pdfBuffer, uniquePdfName) => {
+  const s3Client = new S3Client({
+    region: 'ap-southeast-2'
+  })
+
+  const uploadCommand = new PutObjectCommand({
+    Bucket: 'pdfconversions-abhinav-n11795611',
+    Key: uniquePdfName,
+    Body: pdfBuffer
+  })
+
+  await s3Client.send(uploadCommand);
+
+  return { success: true, message: 'PDF download url pushed to S3' };
+}
+
 const handleFileConvert = async (req, res) => {
   try {
     const username = req.user ? req.user.username : "anonymous";
@@ -431,6 +450,7 @@ const handleFileConvert = async (req, res) => {
     });
     addJobToCSV(jobs.jobs);
     parseCSVIntoDatabase();
+    pushPdfDownloadUrlToS3(pdfBuffer, uniquePdfName);
   } catch (error) {
     console.error("Conversion error:", error);
     return res.status(500).json({

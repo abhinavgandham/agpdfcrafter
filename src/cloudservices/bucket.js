@@ -1,7 +1,7 @@
 const { 
     S3Client, CreateBucketCommand, 
     ListBucketsCommand, GetBucketTaggingCommand, 
-    PutBucketTaggingCommand 
+    PutBucketTaggingCommand, PutBucketLifecycleConfigurationCommand 
 } = require("@aws-sdk/client-s3");
 const env = require('dotenv');
 
@@ -9,11 +9,15 @@ env.config();
 
 const bucketName = 'pdfconversions-abhinav-n11795611';
 
-// Initialize S3 client - AWS SDK will automatically use SSO credentials
+// Initialize S3 client
 const s3Client = new S3Client({
     region: 'ap-southeast-2'
 });
 
+/**
+ * Function to tag the bucket.
+ * @returns {Promise<{success: boolean, message: string, error: string}>}
+ */
 const tagBucket = async () => {
     try {
         // First, try to get existing tags
@@ -58,6 +62,10 @@ const tagBucket = async () => {
     }
 }
 
+/**
+ * Function to create the bucket.
+ * @returns {Promise<{success: boolean, message: string, error: string}>}
+ */
 const createBucket = async () => {
     // Getting the current list of buckets
     const listBuckets = await s3Client.send(new ListBucketsCommand({}));
@@ -75,6 +83,8 @@ const createBucket = async () => {
         const createCommand = new CreateBucketCommand({ Bucket: bucketName });
         const response = await s3Client.send(createCommand);
         console.log(`Bucket '${bucketName}' created successfully:`, response.Location);
+        tagBucket();
+        setupLifecyclePolicy();
         return { success: true, message: 'Bucket created successfully' };
     }
     
@@ -84,6 +94,37 @@ const createBucket = async () => {
     return { success: false, error: error.message };
    }
 
+}
+
+/**
+ * Function to setup the lifecycle policy.
+ * @returns {Promise<{success: boolean, message: string, error: string}>}
+ */
+const setupLifecyclePolicy = async () => {
+    try {
+        const lifecycleConfig = {
+            Bucket: bucketName,
+            LifecycleConfiguration: {
+                Rules: [
+                    {
+                        ID: 'DeleteAfter48Hours',
+                        Status: 'Enabled',
+                        Filter: {},
+                        Expiration: {
+                            Days: 2
+                        }
+                    }
+                ]
+            }
+        };
+
+        await s3Client.send(new PutBucketLifecycleConfigurationCommand(lifecycleConfig));
+        console.log('Lifecycle policy set: Objects will be deleted after 48 hours');
+        return { success: true, message: 'Lifecycle policy configured' };
+    } catch (error) {
+        console.error('Error setting lifecycle policy:', error);
+        return { success: false, error: error.message };
+    }
 }
 
 module.exports = { createBucket, tagBucket, s3Client };
