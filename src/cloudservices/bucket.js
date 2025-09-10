@@ -8,6 +8,7 @@ const env = require('dotenv');
 env.config();
 
 const bucketName = 'pdfconversions-abhinav-n11795611';
+const conversionsPrefix = 'conversions/';
 
 // Initialize S3 client
 const s3Client = new S3Client({
@@ -20,9 +21,21 @@ const s3Client = new S3Client({
  */
 const tagBucket = async () => {
     try {
-        // First, try to get existing tags
-        const getTags = await s3Client.send(new GetBucketTaggingCommand({ Bucket: bucketName }));
-        const tags = getTags.TagSet || [];
+        // First, check if bucket exists by trying to get existing tags
+        let tags = [];
+        try {
+            const getTags = await s3Client.send(new GetBucketTaggingCommand({ Bucket: bucketName }));
+            tags = getTags.TagSet || [];
+        } catch (bucketError) {
+            if (bucketError.name === 'NoSuchBucket') {
+                console.log('Bucket does not exist yet, skipping tagging');
+                return { success: false, error: 'Bucket does not exist' };
+            }
+            // If it's NoSuchTagSet, bucket exists but has no tags - continue
+            if (bucketError.name !== 'NoSuchTagSet') {
+                throw bucketError;
+            }
+        }
 
         // Check if the tag already exists
         const tagExists = tags.some(tag => tag.Key === 'Name' && tag.Value === 'pdfconversions-abhinav-n11795611');
@@ -83,8 +96,27 @@ const createBucket = async () => {
         const createCommand = new CreateBucketCommand({ Bucket: bucketName });
         const response = await s3Client.send(createCommand);
         console.log(`Bucket '${bucketName}' created successfully:`, response.Location);
-        tagBucket();
-        setupLifecyclePolicy();
+        
+        // Add delays between operations to avoid conflicts
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Longer delay for bucket creation
+        
+        const tagResult = await tagBucket();
+        if (!tagResult.success) {
+            console.log('Tagging failed, but continuing:', tagResult.error);
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const lifecycleResult = await setupLifecyclePolicy();
+        if (!lifecycleResult.success) {
+            console.log('Lifecycle policy failed, but continuing:', lifecycleResult.error);
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const directoryResult = await setupConversionsDirectory();
+        if (!directoryResult.success) {
+            console.log('Directory setup failed, but continuing:', directoryResult.error);
+        }
+        
         return { success: true, message: 'Bucket created successfully' };
     }
     
@@ -107,9 +139,11 @@ const setupLifecyclePolicy = async () => {
             LifecycleConfiguration: {
                 Rules: [
                     {
-                        ID: 'DeleteAfter48Hours',
+                        ID: 'DeleteConversionsAfter48Hours',
                         Status: 'Enabled',
-                        Filter: {},
+                        Filter: {
+                            Prefix: conversionsPrefix
+                        },
                         Expiration: {
                             Days: 2
                         }
@@ -127,4 +161,36 @@ const setupLifecyclePolicy = async () => {
     }
 }
 
-module.exports = { createBucket, tagBucket, s3Client };
+/**
+ * Function to set up the conversions directory structure in S3
+ * @returns {Promise<{success: boolean, message: string, error: string}>}
+ */
+const setupConversionsDirectory = async () => {
+    try {
+        const { PutObjectCommand } = require("@aws-sdk/client-s3");
+        
+        // Create a placeholder file to establish the conversions "directory"
+        const placeholderCommand = new PutObjectCommand({
+            Bucket: bucketName,
+            Key: `${conversionsPrefix}.gitkeep`, // Hidden file to maintain directory structure
+            Body: Buffer.from(''), // Empty content as Buffer
+            ContentType: 'text/plain'
+        });
+        
+        await s3Client.send(placeholderCommand);
+        console.log(`Conversions directory structure created: ${conversionsPrefix}`);
+        return { success: true, message: 'Conversions directory structure created' };
+        
+    } catch (error) {
+        console.error('Error creating conversions directory:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+module.exports = { 
+    createBucket, 
+    tagBucket, 
+    setupConversionsDirectory, 
+    conversionsPrefix,
+    s3Client 
+};

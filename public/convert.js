@@ -20,10 +20,8 @@ const convert = async () => {
        const downloadLink = document.querySelector("#downloadLink");
        if (downloadLink && result.downloadUrl) {
 
-         const filename = result.downloadUrl.split('/').pop();
-
          downloadLink.innerHTML = `
-           <a href="#" id="downloadBtn" class="download-btn" data-filename="${filename}">
+           <a href="#" id="downloadBtn" class="download-btn" data-download-url="${result.downloadUrl}">
              📥 Download ${result.convertedFile}
            </a>
          `;

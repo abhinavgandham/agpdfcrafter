@@ -6,8 +6,9 @@ const { parse } = require("json2csv");
 const sqlite3 = require("sqlite3").verbose();
 const csv = require("csv-parser");
 const { 
-  S3Client, PutObjectCommand
+  S3Client, PutObjectCommand, GetObjectCommand
 } = require("@aws-sdk/client-s3");
+const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 
 // Load jobs with safety check
 let jobs;
@@ -351,19 +352,37 @@ const parseCSVIntoDatabase = () => {
 };
 
 const pushPdfDownloadUrlToS3 = async (pdfBuffer, uniquePdfName) => {
-  const s3Client = new S3Client({
-    region: 'ap-southeast-2'
-  })
+  try {
+    const s3Client = new S3Client({
+      region: 'ap-southeast-2'
+    })
 
-  const uploadCommand = new PutObjectCommand({
-    Bucket: 'pdfconversions-abhinav-n11795611',
-    Key: uniquePdfName,
-    Body: pdfBuffer
-  })
+    const uploadCommand = new PutObjectCommand({
+      Bucket: 'pdfconversions-abhinav-n11795611',
+      Key: `conversions/${uniquePdfName}`,
+      Body: pdfBuffer,
+      ContentType: 'application/pdf'
+    })
 
-  await s3Client.send(uploadCommand);
-
-  return { success: true, message: 'PDF download url pushed to S3' };
+    await s3Client.send(uploadCommand);
+    console.log(`✅ File uploaded to S3: conversions/${uniquePdfName}`);
+    
+    // Generate presigned URL for download
+    const downloadCommand = new GetObjectCommand({
+      Bucket: 'pdfconversions-abhinav-n11795611',
+      Key: `conversions/${uniquePdfName}`
+    });
+    
+    const downloadUrl = await getSignedUrl(s3Client, downloadCommand, { 
+      expiresIn: 3600 // 1 hour
+    });
+    
+    console.log(`✅ Presigned URL generated for: ${uniquePdfName}`);
+    return { success: true, message: 'PDF uploaded to S3', downloadUrl };
+  } catch (error) {
+    console.error('❌ S3 upload error:', error);
+    return { success: false, error: error.message };
+  }
 }
 
 const handleFileConvert = async (req, res) => {
@@ -401,15 +420,12 @@ const handleFileConvert = async (req, res) => {
 
     console.log("PDF generated, size:", pdfBuffer.length);
 
-    const conversionsDir = path.join(__dirname, "../conversions");
-    if (!fs.existsSync(conversionsDir)) {
-      fs.mkdirSync(conversionsDir, { recursive: true });
-    }
-
     const timestamp = Date.now();
     const uniquePdfName = `${req.user.username}_${fileExtension}_${timestamp}.pdf`;
-    const pdfPath = path.join(conversionsDir, uniquePdfName);
-    fs.writeFileSync(pdfPath, pdfBuffer);
+
+    // Upload to S3 and get presigned URL
+    const s3Result = await pushPdfDownloadUrlToS3(pdfBuffer, uniquePdfName);
+    const downloadUrl = s3Result.success ? s3Result.downloadUrl : `/api/file/download/${uniquePdfName}`;
 
     // Create job record BEFORE sending response
     try {
@@ -426,7 +442,7 @@ const handleFileConvert = async (req, res) => {
         new Date().toISOString(),
         file.size,
         pdfBuffer.length,
-        `/api/file/download/${uniquePdfName}`
+        downloadUrl
       );
       jobs.jobs.push(job);
 
@@ -445,12 +461,11 @@ const handleFileConvert = async (req, res) => {
       jobId: `${username}-${fileExtension}-${timestamp}`,
       originalFile: fileName,
       convertedFile: convertedFileName,
-      downloadUrl: `/api/file/download/${uniquePdfName}`,
+      downloadUrl: downloadUrl,
       fileSize: pdfBuffer.length,
     });
     addJobToCSV(jobs.jobs);
     parseCSVIntoDatabase();
-    pushPdfDownloadUrlToS3(pdfBuffer, uniquePdfName);
   } catch (error) {
     console.error("Conversion error:", error);
     return res.status(500).json({
