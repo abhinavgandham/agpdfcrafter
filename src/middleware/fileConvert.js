@@ -9,6 +9,7 @@ const {
   S3Client, PutObjectCommand, GetObjectCommand
 } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
+const { insertJob } = require("../cloudservices/dynamodb.js");
 
 // Load jobs with safety check
 let jobs;
@@ -239,118 +240,6 @@ const docxToPdf = async (docxBuffer) => {
   }
 };
 
-const createJob = (
-  jobId,
-  originalFileName,
-  convertedFileName,
-  fileType,
-  userName,
-  fullName,
-  jobResult,
-  timeStamp,
-  fileSize,
-  pdfSize,
-  downloadUrl
-) => {
-  const job = {
-    jobId,
-    originalFileName,
-    convertedFileName,
-    fileType,
-    userName,
-    fullName,
-    jobResult,
-    timeStamp,
-    fileSize,
-    pdfSize,
-    downloadUrl,
-  };
-  return job;
-};
-
-
-// Creating jobs csv file and adding the job
-const addJobToCSV = (jobs) => {
-  try {
-    const csvData = parse(jobs, [
-      "jobId",
-      "originalFileName",
-      "convertedFileName",
-      "fileType",
-      "userName",
-      "jobResult",
-      "timeStamp",
-      "fileSize",
-      "pdfSize",
-      "downloadUrl",
-    ]);
-
-    // Write to jobs.csv file
-    fs.writeFileSync(path.join(__dirname, "../jobs.csv"), csvData);
-
-    console.log("jobs.csv created successfully");
-  } catch (csvError) {
-    console.error("CSV creation error:", csvError);
-  }
-};
-
-// Function that parses the csv data and adds the job into the database
-const parseCSVIntoDatabase = () => {
-  const db = new sqlite3.Database("jobs.db");
-  // Create Jobs table
-  db.serialize(() => {
-    db.run(`
-          CREATE TABLE IF NOT EXISTS Jobs (
-            jobId TEXT PRIMARY KEY,
-            originalFileName TEXT,
-            convertedFileName TEXT,
-            fileType TEXT,
-            userName TEXT,
-            jobResult TEXT,
-            timeStamp TEXT,
-            fileSize INTEGER,
-            pdfSize INTEGER,
-            downloadUrl TEXT
-          )
-          `);
-  });
-
-  const stmt = db.prepare(`
-    INSERT OR REPLACE INTO Jobs 
-    (jobId, originalFileName, convertedFileName, fileType, userName, jobResult, timeStamp, fileSize, pdfSize, downloadUrl) 
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  // Read CSV and insert into SQLite
-  fs.createReadStream(path.join(__dirname, "../jobs.csv"))
-    .pipe(csv({ mapHeaders: ({ header }) => header.trim() }))
-    .on("data", (row) => {
-      stmt.run(
-        row.jobId || `job-${Date.now()}`,
-        row.originalFileName || "unknown",
-        row.convertedFileName || "unknown.pdf",
-        row.fileType || "unknown",
-        row.userName || "anonymous",
-        row.jobResult || "success",
-        row.timeStamp || new Date().toISOString(),
-        parseInt(row.fileSize) || 0,
-        parseInt(row.pdfSize) || 0,
-        row.downloadUrl || ""
-      );
-    })
-    .on("end", () => {
-      stmt.finalize();
-      console.log("CSV data inserted into SQLite");
-
-      // Verify by printing all rows
-      db.each("SELECT * FROM Jobs", (err, row) => {
-        console.log("Row from DB:", row);
-      });
-
-      db.close();
-    });
-};
-
 const pushPdfDownloadUrlToS3 = async (pdfBuffer, uniquePdfName) => {
   try {
     const s3Client = new S3Client({
@@ -427,32 +316,27 @@ const handleFileConvert = async (req, res) => {
     const s3Result = await pushPdfDownloadUrlToS3(pdfBuffer, uniquePdfName);
     const downloadUrl = s3Result.success ? s3Result.downloadUrl : `/api/file/download/${uniquePdfName}`;
 
-    // Create job record BEFORE sending response
+    // Create job record in DynamoDB BEFORE sending response
     try {
       const username = req.user ? req.user.username : "anonymous";
-      const fullName = req.user ? req.user.fullName : "anonymous";
-      const job = createJob(
-        `${username}-${fileExtension}-${Date.now()}`,
-        fileName,
-        convertedFileName,
-        fileExtension,
-        username,
-        fullName,
-        "success",
-        new Date().toISOString(),
-        file.size,
-        pdfBuffer.length,
-        downloadUrl
-      );
-      jobs.jobs.push(job);
-
-      // Write to jobs.json file
-      fs.writeFileSync(
-        path.join(__dirname, "../jobs.json"),
-        JSON.stringify(jobs, null, 2)
+      const jobId = `${username}-${fileExtension}-${timestamp}`;
+      
+      // Insert Job into DynamoDB
+      await insertJob(
+        'n11795611',                    // qut-username (your student ID)
+        jobId,                          // jobId
+        fileName,                       // originalFileName
+        convertedFileName,              // convertedFileName
+        fileExtension,                  // fileType
+        username,                       // userName
+        "success",                      // jobResult
+        new Date().toISOString(),       // timeStamp
+        file.size,                      // fileSize
+        pdfBuffer.length,               // pdfSize
+        downloadUrl                     // downloadUrl
       );
     } catch (jobError) {
-      console.error("Job creation error:", jobError);
+      console.error("DynamoDB job creation error:", jobError);
       // Don't fail the conversion if job creation fails
     }
 
@@ -464,8 +348,6 @@ const handleFileConvert = async (req, res) => {
       downloadUrl: downloadUrl,
       fileSize: pdfBuffer.length,
     });
-    addJobToCSV(jobs.jobs);
-    parseCSVIntoDatabase();
   } catch (error) {
     console.error("Conversion error:", error);
     return res.status(500).json({

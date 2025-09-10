@@ -9,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const loadSwaggerDocument = require('./src/swagger.js');
 const { createBucket, tagBucket } = require('./src/cloudservices/bucket.js');
+const { initDynamoDB } = require('./src/cloudservices/dynamodb.js');
 const app = express();
 
 env.config();
@@ -24,6 +25,7 @@ app.use('/api/user', userRoutes);
 
 createBucket()
 tagBucket()
+initDynamoDB()
 
 // Load the swagger document and set up the UI
 const swaggerDocument = loadSwaggerDocument();
