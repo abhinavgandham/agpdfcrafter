@@ -323,7 +323,7 @@ const handleFileConvert = async (req, res) => {
       
       // Insert Job into DynamoDB
       await insertJob(
-        'n11795611',                    // qut-username (your student ID)
+        'n11795611@qut.edu.au',         // qut-username (your full QUT email)
         jobId,                          // jobId
         fileName,                       // originalFileName
         convertedFileName,              // convertedFileName
