@@ -12,8 +12,8 @@ const login = async () => {
   const { getUserJobs, getAllJobs} = await import('./jobs.js');
   const {displayAllUsers, displayUserById} = await import('./users.js');
 
-  const username = document.querySelector("#username").value;
-  const password = document.querySelector("#password").value;
+  const username = document.querySelector("#loginUsername").value;
+  const password = document.querySelector("#loginPassword").value;
   const messageDiv = document.querySelector("#message");
   const currentUserDiv = document.querySelector("#currentUser");
   const jobsSection = document.querySelector("#jobs");
@@ -34,12 +34,12 @@ const login = async () => {
 
     const data = await response.json();
 
-    if (response.ok && data.data.token) {
+    if (response.ok && data.data.tokens) {
       messageDiv.innerHTML = "✅ Login successful";
       setTimeout(() => (messageDiv.innerHTML = ""), 5000);
 
-      // Store token
-      localStorage.setItem("token", data.data.token);
+      // Store token (use idToken for authentication)
+      localStorage.setItem("token", data.data.tokens.idToken);
 
       // Show current user
       currentUserDiv.innerHTML = `Logged in as ${username}: ${data.data.user.role}`;

@@ -7,6 +7,7 @@
     <title>PDF Converter</title>
     <link rel="stylesheet" href="styles.css">
     <script src="login.js" defer></script>
+    <script src="register.js" defer></script>
     <script src="upload.js" defer></script>
     <script src="convert.js" defer></script>
     <script src="download.js" defer></script>
@@ -15,12 +16,36 @@
 
 <body>
     <h1 style="text-align: center;">Login</h1>
+    
+    <!-- Toggle buttons -->
+    <div class="auth-toggle">
+        <button id="showLoginBtn" onclick="showLoginView()" class="toggle-btn active">Login</button>
+        <button id="showRegisterBtn" onclick="showRegisterView()" class="toggle-btn">Register</button>
+    </div>
+
+    <!-- Registration Form -->
+    <div class="register-container" style="display: none;">
+        <form id="registerForm" action="/register" method="post">
+            <label for="regUsername">Username</label>
+            <input type="text" id="regUsername" name="username" required>
+            <label for="regEmail">Email</label>
+            <input type="email" id="regEmail" name="email" required>
+            <label for="regFullName">Full Name</label>
+            <input type="text" id="regFullName" name="fullName">
+            <label for="regPassword">Password</label>
+            <input type="password" id="regPassword" name="password" required>
+            <button type="submit">Register</button>
+        </form>
+        <div id="regMessage"></div>
+    </div>
+
+    <!-- Login Form -->
     <div class="login-container">
         <form id="loginForm" action="/login" method="post">
-            <label for="username">Username</label>
-            <input type="text" id="username" name="username">
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password">
+            <label for="loginUsername">Username</label>
+            <input type="text" id="loginUsername" name="username" required>
+            <label for="loginPassword">Password</label>
+            <input type="password" id="loginPassword" name="password" required>
             <button type="submit">Login</button>
         </form>
         <div id="message"></div>

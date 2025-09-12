@@ -1,4 +1,35 @@
-.login-container {
+/* Auth Toggle Buttons */
+.auth-toggle {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+    gap: 10px;
+}
+
+.toggle-btn {
+    padding: 10px 20px;
+    background-color: #f8f9fa;
+    color: #495057;
+    border: 2px solid #dee2e6;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.3s ease;
+}
+
+.toggle-btn:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.toggle-btn.active {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+/* Login and Register Containers */
+.login-container, .register-container {
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -7,21 +38,35 @@
     gap: 20px;
 }
 
-.login-container form {
+.login-container form, .register-container form {
     display: flex;
     flex-direction: column;
     gap: 10px;
     width: 300px;
 }
 
-.login-container form input {
+.login-container form input, 
+.login-container form select,
+.register-container form input, 
+.register-container form select {
     width: 100%;
     padding: 10px;
     border: 2px solid #ccc;
     border-radius: 5px;
+    box-sizing: border-box;
 }
 
-.login-container form button {
+.login-container form input:focus, 
+.login-container form select:focus,
+.register-container form input:focus, 
+.register-container form select:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
+}
+
+.login-container form button, 
+.register-container form button {
     padding: 10px;
     background-color: #007bff;
     color: white;
@@ -29,6 +74,12 @@
     border-radius: 5px;
     cursor: pointer;
     font-size: 16px;
+    transition: background-color 0.3s ease;
+}
+
+.login-container form button:hover, 
+.register-container form button:hover {
+    background-color: #0056b3;
 }
 
 #logoutBtn {
@@ -41,10 +92,53 @@
     font-size: 16px;
 }
 
-#message {
+#message, #regMessage, #verificationMessage {
     text-align: center;
     min-height: 20px;
     font-weight: bold;
+    padding: 10px;
+    border-radius: 5px;
+    margin: 10px 0;
+}
+
+#verificationForm {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+    text-align: center;
+}
+
+#verificationForm h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+}
+
+#verificationForm input {
+    width: 200px;
+    padding: 10px;
+    border: 2px solid #ccc;
+    border-radius: 5px;
+    margin: 10px;
+    text-align: center;
+    font-size: 16px;
+}
+
+#verificationForm button {
+    padding: 10px 20px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    margin: 10px;
+    transition: background-color 0.3s ease;
+}
+
+#verificationForm button:hover {
+    background-color: #218838;
 }
 
 #currentUser {
