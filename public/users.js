@@ -2,6 +2,7 @@ const displayArea = document.querySelector("#InformationDisplayArea");
 const token = localStorage.getItem("token");
 
 let currentOrder = "asc";
+let currentUserRole = null;
 
 const createTable = () => {
   const table = document.createElement("table");
@@ -17,6 +18,7 @@ const createTable = () => {
         <th>Email</th>
         <th>Full Name</th>
         <th>Role</th>
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody></tbody>`;
@@ -40,6 +42,39 @@ const renderTable = (users, renderToggle = false) => {
 
   for (const user of sortedUsers) {
     const row = document.createElement("tr");
+    
+    // Create actions cell
+    const actionsCell = document.createElement("td");
+    
+    // Only show promote button for normal users and only if current user is admin
+    if (user.role === "normal user" && currentUserRole === "admin") {
+      const promoteButton = document.createElement("button");
+      promoteButton.textContent = "Promote to Admin";
+      promoteButton.style.backgroundColor = "#28a745";
+      promoteButton.style.color = "white";
+      promoteButton.style.border = "none";
+      promoteButton.style.padding = "5px 10px";
+      promoteButton.style.borderRadius = "3px";
+      promoteButton.style.cursor = "pointer";
+      promoteButton.addEventListener("click", () => promoteUser(user.username));
+      actionsCell.appendChild(promoteButton);
+    }
+    else if (user.role === "admin" && currentUserRole === "admin") {
+      const demoteButton = document.createElement("button");
+      demoteButton.textContent = "Demote from Admin";
+      demoteButton.style.backgroundColor = "#dc3545";
+      demoteButton.style.color = "white";
+      demoteButton.style.border = "none";
+      demoteButton.style.padding = "5px 10px";
+      demoteButton.style.borderRadius = "3px";
+      demoteButton.style.cursor = "pointer";
+      demoteButton.addEventListener("click", () => demoteUser(user.username));
+      actionsCell.appendChild(demoteButton);
+    }
+    else {
+      actionsCell.textContent = "-";
+    }
+    
     row.innerHTML = `
       <td>${user.id}</td>
       <td>${user.username}</td>
@@ -47,6 +82,7 @@ const renderTable = (users, renderToggle = false) => {
       <td>${user.fullName}</td>
       <td>${user.role}</td>
     `;
+    row.appendChild(actionsCell);
     tbody.append(row);
   }
 
@@ -67,9 +103,113 @@ const renderTable = (users, renderToggle = false) => {
   }
  
 
+const promoteUser = async (username) => {
+  if (!confirm(`Are you sure you want to promote ${username} to admin?`)) {
+    return;
+  }
+
+  try {
+    const currentToken = localStorage.getItem("token");
+    const response = await fetch("/api/auth/promoteToAdmin", {
+      method: "POST",
+      headers: { 
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${currentToken}` 
+      },
+      body: JSON.stringify({ username }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      displayArea.innerHTML = `✅ ${data.message}`;
+      setTimeout(() => {
+        displayArea.innerHTML = "";
+        // Refresh the users list to show updated roles
+        displayAllUsers();
+      }, 2000);
+    } else {
+      displayArea.innerHTML = `❌ ${data.message}`;
+      setTimeout(() => displayArea.innerHTML = "", 5000);
+    }
+  } catch (error) {
+    displayArea.innerHTML = `❌ Error promoting user: ${error.message}`;
+    setTimeout(() => displayArea.innerHTML = "", 5000);
+  }
+};
+
+const demoteUser = async(username) => {
+  if (!confirm(`Are you sure you want to demote ${username} from admin?`)) {
+    return;
+  }
+
+  try {
+    const currentToken = localStorage.getItem("token");
+    const response = await fetch("/api/auth/demoteFromAdmin", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${currentToken}`
+      },
+      body: JSON.stringify({ username }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      displayArea.innerHTML = `✅ ${data.message}`;
+      setTimeout(() => {
+        displayArea.innerHTML = "";
+        // Refresh the users list to show updated roles
+        displayAllUsers();
+      }, 2000);
+    }
+    else {
+      displayArea.innerHTML = `❌ ${data.message}`;
+      setTimeout(() => displayArea.innerHTML = "", 5000);
+    }
+    } 
+    catch (error) {
+      displayArea.innerHTML = `❌ Error demoting user: ${error.message}`;
+      setTimeout(() => displayArea.innerHTML = "", 5000);
+    }
+  } 
+
+
+const getCurrentUserRole = () => {
+  try {
+    // Get token from localStorage dynamically
+    const currentToken = localStorage.getItem("token");
+    if (!currentToken) {
+      return 'normal user';
+    }
+    
+    // Decode the JWT token to get user role
+    const tokenParts = currentToken.split('.');
+    if (tokenParts.length === 3) {
+      const payload = JSON.parse(atob(tokenParts[1]));
+      return payload['custom:Role'] || 'normal user';
+    }
+  } catch (error) {
+    console.log("Could not decode token:", error);
+  }
+  return 'normal user'; // Default fallback
+};
+
 export const displayAllUsers = async () => {
+  // Get current token dynamically
+  const currentToken = localStorage.getItem("token");
+  if (!currentToken) {
+    displayArea.innerHTML = "❌ No authentication token found. Please login again.";
+    setTimeout(() => displayArea.innerHTML = "", 5000);
+    return;
+  }
+ 
+  // Get current user role from token
+  currentUserRole = getCurrentUserRole();
+
   const response = await fetch("/api/user/getAllUsers", {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Authorization: `Bearer ${currentToken}` },
   });
 
   if (!response.ok) {
@@ -86,8 +226,19 @@ export const displayUserById = async () => {
   const id = prompt("Enter the user ID to search for: ");
   if (!id) return;
 
+  // Get current token dynamically
+  const currentToken = localStorage.getItem("token");
+  if (!currentToken) {
+    displayArea.innerHTML = "❌ No authentication token found. Please login again.";
+    setTimeout(() => displayArea.innerHTML = "", 5000);
+    return;
+  }
+
+  // Get current user role from token
+  currentUserRole = getCurrentUserRole();
+
   const response = await fetch(`/api/user/getUserById/${id}`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Authorization: `Bearer ${currentToken}` },
   });
 
   if (response.status === 404) {
@@ -99,6 +250,5 @@ export const displayUserById = async () => {
   } else {
     const user = await response.json();
     renderTable([user]);
-    
   }
 };

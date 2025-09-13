@@ -27,17 +27,6 @@ const authenticateToken = async (req, res, next) => {
             });
         }
         
-        // Try to decode the token header to see the kid
-        try {
-            const tokenParts = token.split('.');
-            if (tokenParts.length === 3) {
-                const header = JSON.parse(Buffer.from(tokenParts[0], 'base64').toString());
-                console.log('Token header:', header);
-                console.log('Key ID (kid):', header.kid);
-            }
-        } catch (e) {
-            console.log('Could not decode token header:', e.message);
-        }
         
         // Verify the Cognito ID token
         const payload = await idVerifier.verify(token);
@@ -47,7 +36,7 @@ const authenticateToken = async (req, res, next) => {
             id: payload.sub,
             username: payload['cognito:username'],
             email: payload.email,
-            role: payload['custom:role'] || 'normal user',
+            role: payload['custom:Role'] || 'normal user',
             fullName: payload.name,
             tokenPayload: payload
         };

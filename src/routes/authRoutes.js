@@ -1,5 +1,6 @@
 const express = require('express');
-const { register,confirmRegistration,login } = require('../controllers/cognitoController');
+const { register,confirmRegistration,login, 
+    createAdminUser, promoteToAdmin, demoteFromAdmin, removeUser } = require('../controllers/cognitoController');
 const { logout } = require('../controllers/logoutController');
 const { authenticateToken } = require('../middleware/auth');
 
@@ -9,5 +10,9 @@ router.post('/register', register);
 router.post('/confirm-registration', confirmRegistration);
 router.post('/login', login);
 router.post('/logout', authenticateToken, logout);
+router.post('/createAdminUser', authenticateToken, createAdminUser);
+router.post('/promoteToAdmin', authenticateToken, promoteToAdmin);
+router.post('/demoteFromAdmin', authenticateToken, demoteFromAdmin);
+router.post('/removeUser', authenticateToken, removeUser);
 
 module.exports = router;

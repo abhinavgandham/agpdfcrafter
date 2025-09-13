@@ -143,4 +143,5 @@ async function initDynamoDB() {
     return result.Items || [];
   };
 
+
   module.exports = {initDynamoDB, insertJob, getUserJobs, getAllJobs}
