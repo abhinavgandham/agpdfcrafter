@@ -1,7 +1,9 @@
 const { CognitoIdentityProviderClient, SignUpCommand, 
     InitiateAuthCommand, AuthFlowType, 
     ConfirmSignUpCommand, AdminUpdateUserAttributesCommand,
-    AdminCreateUserCommand, AdminSetUserPasswordCommand} = require("@aws-sdk/client-cognito-identity-provider");
+    AdminCreateUserCommand, AdminSetUserPasswordCommand,
+    AdminGetUserCommand} = require("@aws-sdk/client-cognito-identity-provider");
+const { SESClient, SendEmailCommand } = require("@aws-sdk/client-ses");
 const jwt = require("aws-jwt-verify");
 const crypto = require("crypto");
 
@@ -11,6 +13,10 @@ const clientId = "h5741pe9oeeg12e37me15045r";
 const clientSecret = "1qpg7pp1uk6bj3l6sl8qu4dig4c2kagubi103br662rrhhjlu4bm";
 
 const cognitoClient = new CognitoIdentityProviderClient({
+    region: "ap-southeast-2",
+});
+
+const sesClient = new SESClient({
     region: "ap-southeast-2",
 });
 
@@ -322,6 +328,65 @@ const createAdminUser = async (req, res) => {
     }
 };
 
+const getUserDetails = async (username) => {
+    const userDetailsCommand = await new AdminGetUserCommand({
+        UserPoolId: userPoolId,
+        Username: username
+    })
+
+    const userDetails = await cognitoClient.send(userDetailsCommand)
+
+    return userDetails;
+}
+
+const sendPromotionEmail = async (username, email) => {
+    const sendEmailCommand = new SendEmailCommand({
+        Source: "pdfconverter@cab432.com",
+        Destination: {
+            ToAddresses: [email]
+        },
+        Message: {
+            Subject: {
+                Data: "Congratulations! You have been promoted to admin",
+                Charset: "UTF-8"
+            },
+            Body: {
+                Text: {
+                    Data: `Hi ${username}, you have been promoted to admin. You can now manage users and jobs.`,
+                    Charset: "UTF-8"
+                }
+            }
+        }
+    })
+
+    await sesClient.send(sendEmailCommand);
+}
+
+
+const sendDemotionEmail = async (username, email) => {
+    const sendEmailCommand = new SendEmailCommand({
+        Source: "pdfconverter@cab432.com",
+        Destination: {
+            ToAddresses: [email]
+        },
+        Message: {
+            Subject: {
+                Data: "You have been demoted from admin",
+                Charset: "UTF-8"
+            },
+            Body: {
+                Text: {
+                    Data: `Hi ${username}, you have been demoted from admin. You can no longer manage users and jobs.`,
+                    Charset: "UTF-8"
+                }
+            }
+        }
+    })
+
+    await sesClient.send(sendEmailCommand);
+}
+
+
 
 const promoteToAdmin = async (req, res) => {
     try {
@@ -343,6 +408,10 @@ const promoteToAdmin = async (req, res) => {
             });
         }
 
+        const userDetails = await getUserDetails(username);
+
+        const email = userDetails.UserAttributes.find(attr => attr.Name === 'email').Value;
+
         // Update user's role to admin in Cognito
         const updateUserAttributesCommand = new AdminUpdateUserAttributesCommand({
             UserPoolId: userPoolId,
@@ -356,6 +425,14 @@ const promoteToAdmin = async (req, res) => {
         });
 
         await cognitoClient.send(updateUserAttributesCommand);
+
+        // Send email before responding
+        try {
+            await sendPromotionEmail(username, email);
+        } catch (emailError) {
+            console.error('Email sending failed:', emailError);
+            // Continue anyway - don't fail the promotion if email fails
+        }
 
         res.status(200).json({
             success: true,
@@ -399,6 +476,10 @@ const demoteFromAdmin = async (req, res) => {
             });
         }
 
+        const userDetails = await getUserDetails(username);
+
+        const email = userDetails.UserAttributes.find(attr => attr.Name === 'email').Value;
+
         // Update user's role to normal user in Cognito
         const updateUserAttributesCommand = new AdminUpdateUserAttributesCommand({
             UserPoolId: userPoolId,
@@ -416,6 +497,8 @@ const demoteFromAdmin = async (req, res) => {
             success: true,
             message: 'User successfully demoted from admin.'
         });
+
+        await sendDemotionEmail(username, email);
     } catch (error) {
         console.error('Demote from admin error:', error);
 
