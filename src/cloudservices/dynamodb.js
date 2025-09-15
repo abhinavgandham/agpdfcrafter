@@ -131,7 +131,7 @@ async function initDynamoDB() {
    * Function that gets all jobs from the DynamoDB table
    * @returns {Array} - All jobs in the DynamoDB table
    */
-  const getAllJobs = async () => {
+  const getAllJobsFromDB = async () => {
     const client = new DynamoDB.DynamoDBClient({ region: "ap-southeast-2" });
     const docClient = DynamoDBLib.DynamoDBDocumentClient.from(client);
     
@@ -144,4 +144,4 @@ async function initDynamoDB() {
   };
 
 
-  module.exports = {initDynamoDB, insertJob, getUserJobs, getAllJobs}
+  module.exports = {initDynamoDB, insertJob, getUserJobs, getAllConversionJobs: getAllJobsFromDB}

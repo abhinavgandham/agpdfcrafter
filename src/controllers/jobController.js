@@ -1,4 +1,4 @@
-const { getUserJobs: getUserJobsFromDB, getAllJobs: getAllJobsFromDB } = require('../cloudservices/dynamodb');
+const { getUserJobs, getAllConversionJobs  } = require('../cloudservices/dynamodb');
 
 
  // Function that gets all jobs created, admin functionality
@@ -8,8 +8,8 @@ const getAllJobs = async (req, res) => {
         if (role !== 'admin') {
             return res.status(403).json({ message: "Unauthorized" });
         }
-        const allJobs = await getAllJobsFromDB();
-        return res.status(200).json({ jobs: allJobs });
+        const allJobs = await getAllConversionJobs();
+        return res.status(200).json({ jobs: allJobs || [] });
     } catch (error) {
         console.error("Error fetching all jobs:", error);
         return res.status(500).json({ message: "Error fetching jobs" });
@@ -22,7 +22,7 @@ const getJobs = async (req, res) => {
         const { username } = req.user;
         // Use your QUT email as the partition key for DynamoDB
         const qutUsername = 'n11795611@qut.edu.au';
-        const userJobs = await getUserJobsFromDB(qutUsername, username);
+        const userJobs = await getUserJobs(qutUsername, username);
         return res.status(200).json(userJobs);
     } catch (error) {
         console.error("Error fetching user jobs:", error);
