@@ -2,7 +2,8 @@ const { CognitoIdentityProviderClient, SignUpCommand,
     InitiateAuthCommand, AuthFlowType, 
     ConfirmSignUpCommand, AdminUpdateUserAttributesCommand,
     AdminCreateUserCommand, AdminSetUserPasswordCommand,
-    AdminGetUserCommand} = require("@aws-sdk/client-cognito-identity-provider");
+    AdminGetUserCommand, RespondToAuthChallengeCommand, ChallengeNameType, AssociateSoftwareTokenCommand,
+    VerifySoftwareTokenCommand, AdminDeleteUserCommand} = require("@aws-sdk/client-cognito-identity-provider");
 const { SESClient, SendEmailCommand } = require("@aws-sdk/client-ses");
 const jwt = require("aws-jwt-verify");
 const crypto = require("crypto");
@@ -184,35 +185,61 @@ const login = async (req, res) => {
         });
 
         const result = await cognitoClient.send(authCommand);
+        console.log('Cognito InitiateAuth result:', JSON.stringify(result, null, 2)); // Detailed debug log
+        console.log('Cognito ChallengeName:', result.ChallengeName); // Debug log for challenge name
+        
+        const resultChallenge = result.ChallengeName;
+        const resultSession = result.Session;
 
+        // Handle MFA
+        if (result.ChallengeName === ChallengeNameType.SOFTWARE_TOKEN_MFA) {
+            return res.status(200).json({
+                success: true,
+                mfaRequired: true,
+                challengeName: resultChallenge,
+                session: resultSession,
+                username: username,
+                message: 'Please enter the code from your authenticator app.',
+            })
+        }
+
+        // Handle Email OTP MFA
+        if (result.ChallengeName === 'EMAIL_OTP') {
+            return res.status(200).json({
+                success: true,
+                mfaRequired: true,
+                challengeName: resultChallenge,
+                session: resultSession,
+                username: username,
+                message: 'Please enter the code sent to your email.',
+            })
+        }
         if (!result.AuthenticationResult) {
-            res.status(401).json({
+            return res.status(401).json({
                 success: false,
                 message: 'Authentication failed'
-            }); 
-        } else {
-             // Verify the tokens
-             const idTokenVerifyResult = await idVerifier.verify(result.AuthenticationResult.IdToken);
-             
-             res.status(200).json({
-                 success: true,
-                 message: 'Login successful',
-                 data: {
-                     user: {
-                         id: idTokenVerifyResult.sub,
-                         username: idTokenVerifyResult['cognito:username'],
-                         email: idTokenVerifyResult.email,
-                         role: idTokenVerifyResult['custom:Role'] || 'normal user',
-                         fullName: idTokenVerifyResult.name
-                     },
-                     tokens: {
-                         idToken: result.AuthenticationResult.IdToken,
-                         accessToken: result.AuthenticationResult.AccessToken,
-                         refreshToken: result.AuthenticationResult.RefreshToken
-                     }
-                 }
-             });
+            });
         }
+        
+        const idTokenVerifyResult = await idVerifier.verify(result.AuthenticationResult.IdToken);
+        res.status(200).json({
+            success: true,
+            message: 'Login successful',
+            data: {
+                user: {
+                    id: idTokenVerifyResult.sub,
+                    username: idTokenVerifyResult['cognito:username'],
+                    email: idTokenVerifyResult.email,
+                    role: idTokenVerifyResult['custom:Role'] || 'normal user',
+                    fullName: idTokenVerifyResult.name
+                },
+                tokens: {
+                    idToken: result.AuthenticationResult.IdToken,
+                    accessToken: result.AuthenticationResult.AccessToken,
+                    refreshToken: result.AuthenticationResult.RefreshToken
+                }
+            }
+        });
 
     } catch (error) {
         console.error('Login error:', error);
@@ -233,6 +260,82 @@ const login = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error during login'
+        });
+    }
+};
+
+const verifyMFA = async (req, res) => {
+    try {
+        const { session, mfaCode, username, challengeName } = req.body;
+
+        if (!session || !mfaCode || !username) {
+            return res.status(400).json({
+                success: false,
+                message: 'Session, MFA code, and username are required'
+            });
+        }
+
+        const respondCommand = new RespondToAuthChallengeCommand({
+            ClientId: clientId,
+            ChallengeName: challengeName || ChallengeNameType.SOFTWARE_TOKEN_MFA,
+            Session: session,
+            ChallengeResponses: {
+                SOFTWARE_TOKEN_MFA_CODE: mfaCode,
+                EMAIL_OTP_CODE: mfaCode,
+                USERNAME: username,
+                SECRET_HASH: secretHash(clientId, clientSecret, username)
+            }
+        });
+
+        const result = await cognitoClient.send(respondCommand);
+
+        if (result.AuthenticationResult) {
+            // MFA verification successful
+            const idTokenVerifyResult = await idVerifier.verify(result.AuthenticationResult.IdToken);
+            
+            res.status(200).json({
+                success: true,
+                message: 'MFA verification successful',
+                data: {
+                    user: {
+                        id: idTokenVerifyResult.sub,
+                        username: idTokenVerifyResult['cognito:username'],
+                        email: idTokenVerifyResult.email,
+                        role: idTokenVerifyResult['custom:Role'] || 'normal user',
+                        fullName: idTokenVerifyResult.name
+                    },
+                    tokens: {
+                        idToken: result.AuthenticationResult.IdToken,
+                        accessToken: result.AuthenticationResult.AccessToken,
+                        refreshToken: result.AuthenticationResult.RefreshToken
+                    }
+                }
+            });
+        } else {
+            res.status(400).json({
+                success: false,
+                message: 'MFA verification failed'
+            });
+        }
+
+    } catch (error) {
+        console.error('MFA verification error:', error);
+        
+        if (error.name === 'CodeMismatchException') {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid authenticator code'
+            });
+        } else if (error.name === 'ExpiredCodeException') {
+            return res.status(400).json({
+                success: false,
+                message: 'Authenticator code has expired'
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error during MFA verification'
         });
     }
 };
@@ -554,5 +657,6 @@ module.exports = {
     createAdminUser,
     promoteToAdmin,
     demoteFromAdmin,
-    removeUser
+    removeUser,
+    verifyMFA
 };
