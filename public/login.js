@@ -98,7 +98,8 @@ const showMFAForm = (session, username, challengeName, message) => {
   // Handle cancel button
   document.getElementById("cancelMFA").addEventListener("click", () => {
     mfaForm.remove();
-    loginForm.style.display = "block";
+    // Don't set inline display style - let CSS handle it
+    loginForm.style.display = "";
   });
 }
 
@@ -125,7 +126,8 @@ const verifyMFA = async (session, username, challengeName) => {
     if (response.ok && data.data && data.data.tokens) {
       // Remove MFA form
       document.getElementById("mfaForm").remove();
-      document.querySelector("#loginForm").style.display = "block";
+      // Don't set inline display style - let CSS handle it
+      document.querySelector("#loginForm").style.display = "";
       
       // Continue with successful login
       messageDiv.innerHTML = "✅ MFA verification successful";
@@ -163,8 +165,22 @@ const createMainInterface = async (userRole, username) => {
   const loginForm = document.querySelector("#loginForm");
   
 
-  // Hide the login form
-  loginForm.style.display = "none";
+  // Hide the login container (which contains the form)
+  const loginContainer = document.querySelector(".login-container");
+  if (loginContainer) {
+    loginContainer.style.display = "none";
+  }
+  
+  // Hide the login heading and toggle buttons
+  const loginHeading = document.querySelector("h1");
+  if (loginHeading) {
+    loginHeading.style.display = "none";
+  }
+  
+  const authToggle = document.querySelector(".auth-toggle");
+  if (authToggle) {
+    authToggle.style.display = "none";
+  }
 
   // Create Logout button
   const logoutBtn = document.createElement("button");
@@ -175,7 +191,24 @@ const createMainInterface = async (userRole, username) => {
     currentUserDiv.innerHTML = "";
     jobsSection.innerHTML = "";
     displayArea.innerHTML = "";
-    loginForm.style.display = "block"; // Show login form again
+    
+    // Show login container again
+    const loginContainer = document.querySelector(".login-container");
+    if (loginContainer) {
+      loginContainer.style.display = "";
+    }
+    
+    // Show the login heading and toggle buttons again
+    const loginHeading = document.querySelector("h1");
+    if (loginHeading) {
+      loginHeading.style.display = "block";
+    }
+    
+    const authToggle = document.querySelector(".auth-toggle");
+    if (authToggle) {
+      authToggle.style.display = "flex";
+    }
+    
     logoutBtn.remove();
   };
   document.body.prepend(logoutBtn);

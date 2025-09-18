@@ -1,7 +1,7 @@
 const DynamoDB = require("@aws-sdk/client-dynamodb");
 const DynamoDBLib = require("@aws-sdk/lib-dynamodb");
 
-const tableName = 'n11795611-abhinavgandham-conversions';
+const tableName = process.env.DYNAMODB_TABLE_NAME || 'n11795611-abhinavgandham-conversions';
 const sortKey = 'jobId';
 
 
@@ -9,7 +9,7 @@ const sortKey = 'jobId';
  * Function that initialises the DynamoDB table
  */
 async function initDynamoDB() {
-    const client = new DynamoDB.DynamoDBClient({ region: "ap-southeast-2" });
+    const client = new DynamoDB.DynamoDBClient({ region: process.env.AWS_REGION || "ap-southeast-2" });
   
     const describeCommand = new DynamoDB.DescribeTableCommand({
       TableName: tableName
@@ -77,7 +77,7 @@ async function initDynamoDB() {
      fileType, userName, 
      jobResult, timeStamp, 
      fileSize, pdfSize, downloadUrl) => {
-    const client = new DynamoDB.DynamoDBClient({ region: "ap-southeast-2" });
+    const client = new DynamoDB.DynamoDBClient({ region: process.env.AWS_REGION || "ap-southeast-2" });
     const docClient = DynamoDBLib.DynamoDBDocumentClient.from(client);
     const command = new DynamoDBLib.PutCommand({
         TableName: tableName,
@@ -106,7 +106,7 @@ async function initDynamoDB() {
    * @returns {Array} - The jobs for the user
    */
   const getUserJobs = async (qutUsername, actualUsername) => {
-    const client = new DynamoDB.DynamoDBClient({ region: "ap-southeast-2" });
+    const client = new DynamoDB.DynamoDBClient({ region: process.env.AWS_REGION || "ap-southeast-2" });
     const docClient = DynamoDBLib.DynamoDBDocumentClient.from(client);
     
     const command = new DynamoDBLib.QueryCommand({
@@ -132,7 +132,7 @@ async function initDynamoDB() {
    * @returns {Array} - All jobs in the DynamoDB table
    */
   const getAllJobsFromDB = async () => {
-    const client = new DynamoDB.DynamoDBClient({ region: "ap-southeast-2" });
+    const client = new DynamoDB.DynamoDBClient({ region: process.env.AWS_REGION || "ap-southeast-2" });
     const docClient = DynamoDBLib.DynamoDBDocumentClient.from(client);
     
     const command = new DynamoDBLib.ScanCommand({

@@ -8,17 +8,17 @@ const { SESClient, SendEmailCommand } = require("@aws-sdk/client-ses");
 const jwt = require("aws-jwt-verify");
 const crypto = require("crypto");
 
-// Get values from your cognito.js configuration
-const userPoolId = "ap-southeast-2_8XCJUIAAd";
-const clientId = "h5741pe9oeeg12e37me15045r";
-const clientSecret = "1qpg7pp1uk6bj3l6sl8qu4dig4c2kagubi103br662rrhhjlu4bm";
+// Get values from environment variables
+const userPoolId = process.env.COGNITO_USER_POOL_ID || "ap-southeast-2_8XCJUIAAd";
+const clientId = process.env.COGNITO_CLIENT_ID || "h5741pe9oeeg12e37me15045r";
+const clientSecret = process.env.COGNITO_CLIENT_SECRET || "1qpg7pp1uk6bj3l6sl8qu4dig4c2kagubi103br662rrhhjlu4bm";
 
 const cognitoClient = new CognitoIdentityProviderClient({
-    region: "ap-southeast-2",
+    region: process.env.AWS_REGION || "ap-southeast-2",
 });
 
 const sesClient = new SESClient({
-    region: "ap-southeast-2",
+    region: process.env.AWS_REGION || "ap-southeast-2",
 });
 
 const secretHash = (clientId, clientSecret, username) => {

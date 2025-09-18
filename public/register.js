@@ -120,7 +120,10 @@ const showLoginView = () => {
   const loginContainer = document.querySelector(".login-container");
   
   if (registerContainer) registerContainer.style.display = "none";
-  if (loginContainer) loginContainer.style.display = "flex";
+  if (loginContainer) {
+    // Remove any inline display style to let CSS handle it
+    loginContainer.style.display = "";
+  }
   
   // Update toggle buttons
   const showLoginBtn = document.querySelector("#showLoginBtn");

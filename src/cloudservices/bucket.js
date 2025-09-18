@@ -7,12 +7,12 @@ const env = require('dotenv');
 
 env.config();
 
-const bucketName = 'pdfconversions-abhinav-n11795611';
+const bucketName = process.env.S3_BUCKET_NAME || 'pdfconversions-abhinav-n11795611';
 const conversionsPrefix = 'conversions/';
 
 // Initialize S3 client
 const s3Client = new S3Client({
-    region: 'ap-southeast-2'
+    region: process.env.AWS_REGION || 'ap-southeast-2'
 });
 
 /**

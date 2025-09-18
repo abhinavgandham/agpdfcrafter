@@ -4,8 +4,8 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 // Cognito configuration
-const userPoolId = "ap-southeast-2_8XCJUIAAd";
-const clientId = "h5741pe9oeeg12e37me15045r";
+const userPoolId = process.env.COGNITO_USER_POOL_ID || "ap-southeast-2_8XCJUIAAd";
+const clientId = process.env.COGNITO_CLIENT_ID || "h5741pe9oeeg12e37me15045r";
 
 // Create JWT verifier for Cognito ID tokens
 const idVerifier = jwt.CognitoJwtVerifier.create({
