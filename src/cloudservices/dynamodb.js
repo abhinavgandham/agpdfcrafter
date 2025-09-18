@@ -1,7 +1,7 @@
 const DynamoDB = require("@aws-sdk/client-dynamodb");
 const DynamoDBLib = require("@aws-sdk/lib-dynamodb");
+const { getDynamoDBSecret } = require("./secretsManager");
 
-const tableName = process.env.DYNAMODB_TABLE_NAME || 'n11795611-abhinavgandham-conversions';
 const sortKey = 'jobId';
 
 
@@ -10,6 +10,9 @@ const sortKey = 'jobId';
  */
 async function initDynamoDB() {
     const client = new DynamoDB.DynamoDBClient({ region: process.env.AWS_REGION || "ap-southeast-2" });
+  
+    const tableName = await getDynamoDBSecret();
+    console.log('Retrieved table name:', tableName);
   
     const describeCommand = new DynamoDB.DescribeTableCommand({
       TableName: tableName
@@ -79,6 +82,7 @@ async function initDynamoDB() {
      fileSize, pdfSize, downloadUrl) => {
     const client = new DynamoDB.DynamoDBClient({ region: process.env.AWS_REGION || "ap-southeast-2" });
     const docClient = DynamoDBLib.DynamoDBDocumentClient.from(client);
+    const tableName = await getDynamoDBSecret();
     const command = new DynamoDBLib.PutCommand({
         TableName: tableName,
         Item: {
@@ -108,7 +112,7 @@ async function initDynamoDB() {
   const getUserJobs = async (qutUsername, actualUsername) => {
     const client = new DynamoDB.DynamoDBClient({ region: process.env.AWS_REGION || "ap-southeast-2" });
     const docClient = DynamoDBLib.DynamoDBDocumentClient.from(client);
-    
+    const tableName = await getDynamoDBSecret();
     const command = new DynamoDBLib.QueryCommand({
       TableName: tableName,
       KeyConditionExpression: "#username = :username",
@@ -134,7 +138,7 @@ async function initDynamoDB() {
   const getAllJobsFromDB = async () => {
     const client = new DynamoDB.DynamoDBClient({ region: process.env.AWS_REGION || "ap-southeast-2" });
     const docClient = DynamoDBLib.DynamoDBDocumentClient.from(client);
-    
+    const tableName = await getDynamoDBSecret();
     const command = new DynamoDBLib.ScanCommand({
       TableName: tableName
     });
