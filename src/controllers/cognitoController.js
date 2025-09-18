@@ -7,18 +7,18 @@ const { CognitoIdentityProviderClient, SignUpCommand,
 const { SESClient, SendEmailCommand } = require("@aws-sdk/client-ses");
 const jwt = require("aws-jwt-verify");
 const crypto = require("crypto");
+const { getCognitoClientSecret } = require("../cloudservices/secretsManager");
 
 // Get values from environment variables
 const userPoolId = process.env.COGNITO_USER_POOL_ID || "ap-southeast-2_8XCJUIAAd";
 const clientId = process.env.COGNITO_CLIENT_ID || "h5741pe9oeeg12e37me15045r";
-const clientSecret = process.env.COGNITO_CLIENT_SECRET || "1qpg7pp1uk6bj3l6sl8qu4dig4c2kagubi103br662rrhhjlu4bm";
 
 const cognitoClient = new CognitoIdentityProviderClient({
-    region: process.env.AWS_REGION || "ap-southeast-2",
+    region: "ap-southeast-2",
 });
 
 const sesClient = new SESClient({
-    region: process.env.AWS_REGION || "ap-southeast-2",
+    region: "ap-southeast-2",
 });
 
 const secretHash = (clientId, clientSecret, username) => {
@@ -39,6 +39,7 @@ const idVerifier = jwt.CognitoJwtVerifier.create({
     clientId: clientId,
 });
 
+
 const register = async (req, res) => {
     try {
         const { username, password, email, fullName, role = "normal user" } = req.body;
@@ -53,6 +54,8 @@ const register = async (req, res) => {
                 message: 'Username, password, and email are required'
             });
         }
+
+        const clientSecret = await getCognitoClientSecret();
 
         // Create user in Cognito
         const signUpCommand = new SignUpCommand({
@@ -126,6 +129,8 @@ const confirmRegistration = async (req, res) => {
             });
         }
 
+        const clientSecret = await getCognitoClientSecret();
+
         const confirmSignUpCommand = new ConfirmSignUpCommand({
             ClientId: clientId,
             Username: username,
@@ -173,6 +178,8 @@ const login = async (req, res) => {
                 message: 'Username and password are required'
             });
         }
+
+        const clientSecret = await getCognitoClientSecret();
 
         const authCommand = new InitiateAuthCommand({
             AuthFlow: AuthFlowType.USER_PASSWORD_AUTH,
@@ -274,6 +281,8 @@ const verifyMFA = async (req, res) => {
                 message: 'Session, MFA code, and username are required'
             });
         }
+
+        const clientSecret = await getCognitoClientSecret();
 
         const respondCommand = new RespondToAuthChallengeCommand({
             ClientId: clientId,

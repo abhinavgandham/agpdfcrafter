@@ -22,7 +22,7 @@
     "@aws-sdk/client-cognito-identity-provider": "^3.887.0",
     "@aws-sdk/client-dynamodb": "^3.883.0",
     "@aws-sdk/client-s3": "^3.883.0",
-    "@aws-sdk/client-secrets-manager": "^3.888.0",
+    "@aws-sdk/client-secrets-manager": "^3.891.0",
     "@aws-sdk/client-ses": "^3.888.0",
     "@aws-sdk/lib-dynamodb": "^3.883.0",
     "@aws-sdk/s3-request-presigner": "^3.884.0",
