@@ -1,18 +1,19 @@
 const jwt = require('aws-jwt-verify');
+const { getCognitoIdSecret, getUserPoolIdSecret } = require('../cloudservices/secretsManager');
 
 const dotenv = require('dotenv');
 dotenv.config();
 
-// Cognito configuration
-const userPoolId = process.env.COGNITO_USER_POOL_ID || "ap-southeast-2_8XCJUIAAd";
-const clientId = process.env.COGNITO_CLIENT_ID || "h5741pe9oeeg12e37me15045r";
-
 // Create JWT verifier for Cognito ID tokens
-const idVerifier = jwt.CognitoJwtVerifier.create({
-    userPoolId: userPoolId,
-    tokenUse: "id",
-    clientId: clientId,
-});
+const createIdVerifier = async () => {
+    const userPoolId = await getUserPoolIdSecret();
+    const clientId = await getCognitoIdSecret();
+    return jwt.CognitoJwtVerifier.create({
+        userPoolId: userPoolId,
+        tokenUse: "id",
+        clientId: clientId,
+    });
+};
 
 const authenticateToken = async (req, res, next) => {  
     try {
@@ -29,6 +30,7 @@ const authenticateToken = async (req, res, next) => {
         
         
         // Verify the Cognito ID token
+        const idVerifier = await createIdVerifier();
         const payload = await idVerifier.verify(token);
         
         // Add user information to request object

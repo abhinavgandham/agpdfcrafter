@@ -7,11 +7,17 @@ const { CognitoIdentityProviderClient, SignUpCommand,
 const { SESClient, SendEmailCommand } = require("@aws-sdk/client-ses");
 const jwt = require("aws-jwt-verify");
 const crypto = require("crypto");
-const { getCognitoClientSecret } = require("../cloudservices/secretsManager");
+const { getCognitoClientSecret, getCognitoIdSecret, getUserPoolIdSecret } = require("../cloudservices/secretsManager");
 
-// Get values from environment variables
-const userPoolId = process.env.COGNITO_USER_POOL_ID || "ap-southeast-2_8XCJUIAAd";
-const clientId = process.env.COGNITO_CLIENT_ID || "h5741pe9oeeg12e37me15045r";
+// Note: userPoolId and clientId are now retrieved from Secrets Manager
+
+const getClientId = async () => {
+    return await getCognitoIdSecret();
+}
+
+const getUserPoolId = async () => {
+    return await getUserPoolIdSecret();
+}
 
 const cognitoClient = new CognitoIdentityProviderClient({
     region: "ap-southeast-2",
@@ -27,17 +33,25 @@ const secretHash = (clientId, clientSecret, username) => {
     return hasher.digest('base64');
 }
 
-const accessVerifier = jwt.CognitoJwtVerifier.create({
-    userPoolId: userPoolId,
-    tokenUse: "access",
-    clientId: clientId,
-});
+const createAccessVerifier = async () => {
+    const userPoolId = await getUserPoolId();
+    const clientId = await getClientId();
+    return jwt.CognitoJwtVerifier.create({
+        userPoolId: userPoolId,
+        tokenUse: "access",
+        clientId: clientId,
+    });
+};
 
-const idVerifier = jwt.CognitoJwtVerifier.create({
-    userPoolId: userPoolId,
-    tokenUse: "id",
-    clientId: clientId,
-});
+const createIdVerifier = async () => {
+    const userPoolId = await getUserPoolId();
+    const clientId = await getClientId();
+    return jwt.CognitoJwtVerifier.create({
+        userPoolId: userPoolId,
+        tokenUse: "id",
+        clientId: clientId,
+    });
+};
 
 
 const register = async (req, res) => {
@@ -56,6 +70,7 @@ const register = async (req, res) => {
         }
 
         const clientSecret = await getCognitoClientSecret();
+        const clientId = await getClientId();
 
         // Create user in Cognito
         const signUpCommand = new SignUpCommand({
@@ -130,6 +145,7 @@ const confirmRegistration = async (req, res) => {
         }
 
         const clientSecret = await getCognitoClientSecret();
+        const clientId = await getClientId();
 
         const confirmSignUpCommand = new ConfirmSignUpCommand({
             ClientId: clientId,
@@ -180,6 +196,7 @@ const login = async (req, res) => {
         }
 
         const clientSecret = await getCognitoClientSecret();
+        const clientId = await getClientId();
 
         const authCommand = new InitiateAuthCommand({
             AuthFlow: AuthFlowType.USER_PASSWORD_AUTH,
@@ -228,6 +245,7 @@ const login = async (req, res) => {
             });
         }
         
+        const idVerifier = await createIdVerifier();
         const idTokenVerifyResult = await idVerifier.verify(result.AuthenticationResult.IdToken);
         res.status(200).json({
             success: true,
@@ -283,6 +301,7 @@ const verifyMFA = async (req, res) => {
         }
 
         const clientSecret = await getCognitoClientSecret();
+        const clientId = await getClientId();
 
         const respondCommand = new RespondToAuthChallengeCommand({
             ClientId: clientId,
@@ -300,7 +319,8 @@ const verifyMFA = async (req, res) => {
 
         if (result.AuthenticationResult) {
             // MFA verification successful
-            const idTokenVerifyResult = await idVerifier.verify(result.AuthenticationResult.IdToken);
+            const idVerifier = await createIdVerifier();
+        const idTokenVerifyResult = await idVerifier.verify(result.AuthenticationResult.IdToken);
             
             res.status(200).json({
                 success: true,
@@ -368,6 +388,7 @@ const createAdminUser = async (req, res) => {
                 message: 'Username, email, and password are required'
             });
         }
+        const userPoolId = await getUserPoolId();
 
         // Step 1: Create the user
         const createUserCommand = new AdminCreateUserCommand({
@@ -441,6 +462,7 @@ const createAdminUser = async (req, res) => {
 };
 
 const getUserDetails = async (username) => {
+    const userPoolId = await getUserPoolId();
     const userDetailsCommand = await new AdminGetUserCommand({
         UserPoolId: userPoolId,
         Username: username
@@ -524,6 +546,8 @@ const promoteToAdmin = async (req, res) => {
 
         const email = userDetails.UserAttributes.find(attr => attr.Name === 'email').Value;
 
+        const userPoolId = await getUserPoolId();
+
         // Update user's role to admin in Cognito
         const updateUserAttributesCommand = new AdminUpdateUserAttributesCommand({
             UserPoolId: userPoolId,
@@ -592,6 +616,8 @@ const demoteFromAdmin = async (req, res) => {
 
         const email = userDetails.UserAttributes.find(attr => attr.Name === 'email').Value;
 
+        const userPoolId = await getUserPoolId();
+
         // Update user's role to normal user in Cognito
         const updateUserAttributesCommand = new AdminUpdateUserAttributesCommand({
             UserPoolId: userPoolId,
@@ -631,6 +657,7 @@ const demoteFromAdmin = async (req, res) => {
 const removeUser = async (req, res) => {
     try {
         const { username } = req.body;
+        const userPoolId = await getUserPoolId();
         const removeUserCommand = new AdminDeleteUserCommand({
             UserPoolId: userPoolId,
             Username: username

@@ -7,6 +7,8 @@ const secretsManagerClient = new SecretsManagerClient({
 
 // Secret Names
 const cognitioClientSecret = "n11795611-cognitoSecret-assessment2";
+const cognitioIdSecret = "n11795611-cognitoClientId-assessment2";
+const userPoolIdSecret = "n11795611-userPoolId-assessment2";
 const dynamoDBSecret = "n11795611-dynamoDBTableName-assessment2";
 const bucketSecret = "n11795611-bucketName-assessment2";
 
@@ -29,6 +31,47 @@ const getCognitoClientSecret = async () => {
     
     return secret.cognitoSecret;
 }
+
+const getCognitoIdSecret = async () => {
+    let response;
+    try {
+        response = await secretsManagerClient.send(new GetSecretValueCommand({
+            SecretId: cognitioIdSecret,
+            VersionStage: "AWSCURRENT",
+        }))
+    } catch (error) {
+        console.error('Error getting Cognito client ID:', error);
+        throw error;
+    }
+
+    console.log('Raw secret response:', response.SecretString);
+    const secret = JSON.parse(response.SecretString);
+    console.log('Parsed secret object:', secret);
+    console.log('cognitoClientId value:', secret.cognitoClientId);
+    
+    return secret.cognitoClientId;
+}
+
+const getUserPoolIdSecret = async () => {
+    let response;
+    try {
+        response = await secretsManagerClient.send(new GetSecretValueCommand({
+            SecretId: userPoolIdSecret,
+            VersionStage: "AWSCURRENT",
+        }))
+    } catch (error) {
+        console.error('Error getting user pool ID:', error);
+        throw error;
+    }
+
+    console.log('Raw secret response:', response.SecretString);
+    const secret = JSON.parse(response.SecretString);
+    console.log('Parsed secret object:', secret);
+    console.log('userPoolId value:', secret.userPoolId);
+    
+    return secret.userPoolId;
+}
+
 
 const getDynamoDBSecret = async () => {
     let response;
@@ -73,4 +116,5 @@ const getBucketSecret = async () => {
 
 
 
-module.exports = { getCognitoClientSecret, getDynamoDBSecret, getBucketSecret };
+module.exports = { getCognitoClientSecret, getCognitoIdSecret, 
+    getDynamoDBSecret, getBucketSecret, getUserPoolIdSecret };
