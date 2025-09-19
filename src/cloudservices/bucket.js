@@ -10,7 +10,6 @@ env.config();
 
 const conversionsPrefix = 'conversions/';
 
-// Initialize S3 client
 const s3Client = new S3Client({
     region: process.env.AWS_REGION || 'ap-southeast-2'
 });

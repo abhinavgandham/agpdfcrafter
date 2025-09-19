@@ -1,16 +1,30 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Deploy Ubuntu EC2 with Docker Compose pulling containers from ECR
+Description: Complete infrastructure for PDF Converter application
+
+Parameters:
+  InstanceType:
+    Type: String
+    Default: t3.medium
+    AllowedValues: [t3.small, t3.medium]
+    Description: EC2 instance type
 
 Resources:
+  # EC2 Instance
   MyEC2Instance:
     Type: AWS::EC2::Instance
     Properties:
-      InstanceType: t2.small
-      ImageId: ami-0abcdef1234567890
-      IamInstanceProfile: AmazonSSMRoleForInstancesQuickSetup
-      SecurityGroupIds:
-        - sg-032bd1ff8cf77dbb9
-      SubnetId: subnet-075811427d5564cf9
+      InstanceType: !Ref InstanceType
+      ImageId: ami-0a0f4cb8a4cf6819c  # Ubuntu 22.04 LTS in ap-southeast-2
+      IamInstanceProfile: CAB432-Instance-Role
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: subnet-07ea9e4f9cc9159ca
+          GroupSet:
+            - sg-032bd1ff8cf77dbb9
+      Tags:
+        - Key: Name
+          Value: n11795611-abhinav-assessment2
       UserData:
         Fn::Base64: |
           #!/bin/bash
@@ -38,4 +52,23 @@ Resources:
                 - '3000:3000'" > /home/ubuntu/myapp/docker-compose.yml
 
                     # Run Docker Compose
-                    docker-compose up -d
+                    docker-compose up
+
+Outputs:
+  InstanceId:
+    Description: EC2 Instance ID
+    Value: !Ref MyEC2Instance
+    Export:
+      Name: !Sub "${AWS::StackName}-InstanceId"
+  
+  PublicIP:
+    Description: Public IP address of the instance
+    Value: !GetAtt MyEC2Instance.PublicIp
+    Export:
+      Name: !Sub "${AWS::StackName}-PublicIP"
+  
+  ApplicationURL:
+    Description: URL to access the application
+    Value: !Sub "http://${MyEC2Instance.PublicIp}:3000"
+    Export:
+      Name: !Sub "${AWS::StackName}-ApplicationURL"
