@@ -3,11 +3,11 @@ const {
     ListBucketsCommand, GetBucketTaggingCommand, 
     PutBucketTaggingCommand, PutBucketLifecycleConfigurationCommand 
 } = require("@aws-sdk/client-s3");
+const { getBucketSecret } = require("./secretsManager");
 const env = require('dotenv');
 
 env.config();
 
-const bucketName = process.env.S3_BUCKET_NAME || 'pdfconversions-abhinav-n11795611';
 const conversionsPrefix = 'conversions/';
 
 // Initialize S3 client
@@ -23,6 +23,7 @@ const tagBucket = async () => {
     try {
         // First, check if bucket exists by trying to get existing tags
         let tags = [];
+        const bucketName = await getBucketSecret();
         try {
             const getTags = await s3Client.send(new GetBucketTaggingCommand({ Bucket: bucketName }));
             tags = getTags.TagSet || [];
@@ -80,6 +81,7 @@ const tagBucket = async () => {
  * @returns {Promise<{success: boolean, message: string, error: string}>}
  */
 const createBucket = async () => {
+    const bucketName = await getBucketSecret();
     // Getting the current list of buckets
     const listBuckets = await s3Client.send(new ListBucketsCommand({}));
 
@@ -133,6 +135,7 @@ const createBucket = async () => {
  * @returns {Promise<{success: boolean, message: string, error: string}>}
  */
 const setupLifecyclePolicy = async () => {
+    const bucketName = await getBucketSecret();
     try {
         const lifecycleConfig = {
             Bucket: bucketName,

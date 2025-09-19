@@ -8,6 +8,7 @@ const secretsManagerClient = new SecretsManagerClient({
 // Secret Names
 const cognitioClientSecret = "n11795611-cognitoSecret-assessment2";
 const dynamoDBSecret = "n11795611-dynamoDBTableName-assessment2";
+const bucketSecret = "n11795611-bucketName-assessment2";
 
 const getCognitoClientSecret = async () => {
     let response;
@@ -49,5 +50,27 @@ const getDynamoDBSecret = async () => {
     return secret.tableName;
 }
 
+const getBucketSecret = async () => {
+    let response;
+    try {
+        response = await secretsManagerClient.send(new GetSecretValueCommand({
+            SecretId: bucketSecret,
+            VersionStage: "AWSCURRENT",
+        }))
+    } catch (error) {
+        console.error('Error getting bucket secret:', error);
+        throw error;
+    }
 
-module.exports = { getCognitoClientSecret, getDynamoDBSecret };
+    console.log('Raw secret response:', response.SecretString);
+    const secret = JSON.parse(response.SecretString);
+    console.log('Parsed secret object:', secret);
+    console.log('bucketName value:', secret.bucketName);
+    
+    return secret.bucketName;
+}
+
+
+
+
+module.exports = { getCognitoClientSecret, getDynamoDBSecret, getBucketSecret };
