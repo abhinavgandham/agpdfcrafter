@@ -1,28 +1,16 @@
 const puppeteer = require("puppeteer");
-const fs = require("fs");
-const path = require("path");
 const mammoth = require("mammoth");
-const { parse } = require("json2csv");
-const sqlite3 = require("sqlite3").verbose();
-const csv = require("csv-parser");
 const { 
   S3Client, PutObjectCommand, GetObjectCommand
 } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 const { insertJob } = require("../cloudservices/dynamodb.js");
 
-// Load jobs with safety check
-let jobs;
-try {
-  jobs = require("../../jobs.json");
-  if (!jobs || !jobs.jobs) {
-    jobs = { jobs: [] };
-  }
-} catch (error) {
-  console.log("Creating new jobs.json file");
-  jobs = { jobs: [] };
-}
-
+/**
+ * Function to setup Puppeteer, which is used to convert html and md content to PDF.
+ * @param {string} content - The content to convert to PDF.
+ * @returns {Promise<{browser: Browser, page: Page}>} - The browser and page.
+ */
 const setupPuppeteer = async (content) => {
   const browser = await puppeteer.launch({
     headless: "new",
@@ -64,6 +52,11 @@ const setupPuppeteer = async (content) => {
   return { browser, page };
 };
 
+/**
+ * Function to convert html content to PDF.
+ * @param {string} htmlContent - The html content to convert to PDF.
+ * @returns {Promise<Buffer>} - The PDF buffer that is generated.
+ */
 const htmlToPdf = async (htmlContent) => {
   let browser;
   try {
@@ -96,6 +89,11 @@ const htmlToPdf = async (htmlContent) => {
   }
 };
 
+/**
+ * Function to convert docx content to PDF.
+ * @param {Buffer} docxBuffer - The docx buffer to convert to PDF.
+ * @returns {Promise<Buffer>} - The PDF buffer that is generated.
+ */
 const docxToPdf = async (docxBuffer) => {
   try {
     console.log(
@@ -240,6 +238,12 @@ const docxToPdf = async (docxBuffer) => {
   }
 };
 
+/**
+ * Function to push the PDF download URL to S3.
+ * @param {Buffer} pdfBuffer - The PDF buffer to push to S3.
+ * @param {string} uniquePdfName - The unique name of the PDF.
+ * @returns {Promise<{success: boolean, message: string, downloadUrl: string}>} - The result of the operation.
+ */
 const pushPdfDownloadUrlToS3 = async (pdfBuffer, uniquePdfName) => {
   try {
     const s3Client = new S3Client({
@@ -274,6 +278,12 @@ const pushPdfDownloadUrlToS3 = async (pdfBuffer, uniquePdfName) => {
   }
 }
 
+/**
+ * Function to handle the file conversion.
+ * @param {Request} req - The request object.
+ * @param {Response} res - The response object.
+ * @returns {Promise<void>} - The result of the operation.
+ */
 const handleFileConvert = async (req, res) => {
   try {
     const username = req.user ? req.user.username : "anonymous";
@@ -323,21 +333,20 @@ const handleFileConvert = async (req, res) => {
       
       // Insert Job into DynamoDB
       await insertJob(
-        'n11795611@qut.edu.au',         // qut-username (your full QUT email)
-        jobId,                          // jobId
-        fileName,                       // originalFileName
-        convertedFileName,              // convertedFileName
-        fileExtension,                  // fileType
-        username,                       // userName
-        "success",                      // jobResult
-        new Date().toISOString(),       // timeStamp
-        file.size,                      // fileSize
-        pdfBuffer.length,               // pdfSize
-        downloadUrl                     // downloadUrl
+        'n11795611@qut.edu.au',
+        jobId,
+        fileName,
+        convertedFileName,
+        fileExtension,
+        username,
+        "success",
+        new Date().toISOString(),
+        file.size,
+        pdfBuffer.length,
+        downloadUrl
       );
     } catch (jobError) {
       console.error("DynamoDB job creation error:", jobError);
-      // Don't fail the conversion if job creation fails
     }
 
     res.json({

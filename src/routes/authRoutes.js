@@ -1,6 +1,6 @@
 const express = require('express');
 const { register,confirmRegistration,login, 
-    createAdminUser, promoteToAdmin, demoteFromAdmin, removeUser, verifyMFA } = require('../controllers/cognitoController');
+    createAdminUser, promoteToAdmin, demoteFromAdmin, verifyMFA } = require('../controllers/cognitoController');
 const { logout } = require('../controllers/logoutController');
 const { authenticateToken } = require('../middleware/auth');
 
@@ -14,6 +14,5 @@ router.post('/logout', authenticateToken, logout);
 router.post('/createAdminUser', authenticateToken, createAdminUser);
 router.post('/promoteToAdmin', authenticateToken, promoteToAdmin);
 router.post('/demoteFromAdmin', authenticateToken, demoteFromAdmin);
-router.post('/removeUser', authenticateToken, removeUser);
 
 module.exports = router;

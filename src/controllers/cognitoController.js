@@ -9,40 +9,54 @@ const jwt = require("aws-jwt-verify");
 const crypto = require("crypto");
 const { getCognitoClientSecret, getCognitoIdSecret, getUserPoolIdSecret } = require("../cloudservices/secretsManager");
 
-// Note: userPoolId and clientId are now retrieved from Secrets Manager
 
+/**
+ * Getter function for Cognito client ID
+ * @returns {Promise<string>} Cognito client ID
+ */
 const getClientId = async () => {
     return await getCognitoIdSecret();
 }
 
+/**
+ * Getter function for Cognito user pool ID
+ * @returns {Promise<string>} Cognito user pool ID
+ */
 const getUserPoolId = async () => {
     return await getUserPoolIdSecret();
 }
 
+/**
+ * Initialises the cognito client.
+ */
 const cognitoClient = new CognitoIdentityProviderClient({
     region: "ap-southeast-2",
 });
 
+/**
+ * Initialises the SES client.
+ */
 const sesClient = new SESClient({
     region: "ap-southeast-2",
 });
 
+/**
+ * Function to generate a secret hash for the user.
+ * @param {*} clientId - Cognito client ID
+ * @param {*} clientSecret - Cognito client secret
+ * @param {*} username - Username
+ * @returns {string} Secret hash
+ */
 const secretHash = (clientId, clientSecret, username) => {
     const hasher = crypto.createHmac('sha256', clientSecret);
     hasher.update(`${username}${clientId}`);
     return hasher.digest('base64');
 }
 
-const createAccessVerifier = async () => {
-    const userPoolId = await getUserPoolId();
-    const clientId = await getClientId();
-    return jwt.CognitoJwtVerifier.create({
-        userPoolId: userPoolId,
-        tokenUse: "access",
-        clientId: clientId,
-    });
-};
-
+/**
+ * Function to create a JWT verifier for the user.
+ * @returns {Promise<jwt.CognitoJwtVerifier>} JWT verifier
+ */
 const createIdVerifier = async () => {
     const userPoolId = await getUserPoolId();
     const clientId = await getClientId();
@@ -53,13 +67,15 @@ const createIdVerifier = async () => {
     });
 };
 
-
+/**
+ * Function to register a new user.
+ * @param {*} req - Request object
+ * @param {*} res - Response object
+ * @returns {Promise<void>} - Response object
+ */
 const register = async (req, res) => {
     try {
         const { username, password, email, fullName, role = "normal user" } = req.body;
-        
-        // Security: All new registrations are normal users by default
-        // Admin roles must be assigned manually by existing admins
 
         // Validate required fields
         if (!username || !password || !email) {
@@ -133,6 +149,12 @@ const register = async (req, res) => {
     }
 };
 
+/**
+ * Function to confirm a new user.
+ * @param {*} req - Request object
+ * @param {*} res - Response object
+ * @returns {Promise<void>} - Response object
+ */
 const confirmRegistration = async (req, res) => {
     try {
         const { username, confirmationCode } = req.body;
@@ -184,6 +206,12 @@ const confirmRegistration = async (req, res) => {
     }
 };
 
+/**
+ * Function to login a user.
+ * @param {*} req - Request object
+ * @param {*} res - Response object
+ * @returns {Promise<void>} - Response object
+ */
 const login = async (req, res) => {
     try {
         const { username, password } = req.body;
@@ -289,6 +317,12 @@ const login = async (req, res) => {
     }
 };
 
+/**
+ * Function to verify MFA.
+ * @param {*} req - Request object
+ * @param {*} res - Response object
+ * @returns {Promise<void>} - Response object
+ */
 const verifyMFA = async (req, res) => {
     try {
         const { session, mfaCode, username, challengeName } = req.body;
@@ -369,6 +403,12 @@ const verifyMFA = async (req, res) => {
     }
 };
 
+/**
+ * Function to create a new admin user.
+ * @param {*} req - Request object
+ * @param {*} res - Response object
+ * @returns {Promise<void>} - Response object
+ */
 const createAdminUser = async (req, res) => {
     try {
         const { username, email, fullName, password } = req.body;
@@ -461,6 +501,11 @@ const createAdminUser = async (req, res) => {
     }
 };
 
+/**
+ * Function to get user details.
+ * @param {*} username - Username of the user to get details for.
+ * @returns {Promise<AdminGetUserCommandOutput>} - User details
+ */
 const getUserDetails = async (username) => {
     const userPoolId = await getUserPoolId();
     const userDetailsCommand = await new AdminGetUserCommand({
@@ -473,6 +518,12 @@ const getUserDetails = async (username) => {
     return userDetails;
 }
 
+/**
+ * Function to send a promotion email to the user.
+ * @param {*} username - Username of the user to send the email to.
+ * @param {*} email - Email of the user to send the email to.
+ * @returns {Promise<void>} - Promise that resolves when the email is sent.
+ */
 const sendPromotionEmail = async (username, email) => {
     const sendEmailCommand = new SendEmailCommand({
         Source: "pdfconverter@cab432.com",
@@ -496,6 +547,12 @@ const sendPromotionEmail = async (username, email) => {
     await sesClient.send(sendEmailCommand);
 }
 
+/**
+ * Function to send a demotion email to the user.
+ * @param {*} username - Username of the user to send the email to.
+ * @param {*} email - Email of the user to send the email to.
+ * @returns {Promise<void>} - Promise that resolves when the email is sent.
+ */
 
 const sendDemotionEmail = async (username, email) => {
     const sendEmailCommand = new SendEmailCommand({
@@ -520,8 +577,12 @@ const sendDemotionEmail = async (username, email) => {
     await sesClient.send(sendEmailCommand);
 }
 
-
-
+/**
+ * Function to promote a user to admin.
+ * @param {*} req - Request object
+ * @param {*} res - Response object
+ * @returns {Promise<void>} - Response object
+ */
 const promoteToAdmin = async (req, res) => {
     try {
         const { username } = req.body;
@@ -592,6 +653,12 @@ const promoteToAdmin = async (req, res) => {
     }
 }
 
+/**
+ * Function to demote a user from admin.
+ * @param {*} req - Request object
+ * @param {*} res - Response object
+ * @returns {Promise<void>} - Response object
+ */
 const demoteFromAdmin = async (req, res) => {
     try {
         const { username } = req.body;
@@ -654,38 +721,6 @@ const demoteFromAdmin = async (req, res) => {
     }
 };
 
-const removeUser = async (req, res) => {
-    try {
-        const { username } = req.body;
-        const userPoolId = await getUserPoolId();
-        const removeUserCommand = new AdminDeleteUserCommand({
-            UserPoolId: userPoolId,
-            Username: username
-        });
-        await cognitoClient.send(removeUserCommand);
-
-        res.status(200).json({
-            success: true,
-            message: 'User removed successfully'
-        });
-    } catch (error) {
-        console.error('Remove user error:', error);
-
-        if (error.name === 'UserNotFoundException') {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
-        }
-
-        res.status(500).json({
-            success: false,
-            message: 'Internal server error during remove user'
-        });
-    }
-}
-
-
 module.exports = {
     register,
     confirmRegistration,
@@ -693,6 +728,5 @@ module.exports = {
     createAdminUser,
     promoteToAdmin,
     demoteFromAdmin,
-    removeUser,
     verifyMFA
 };
