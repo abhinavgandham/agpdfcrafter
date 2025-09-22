@@ -1,16 +1,18 @@
 const { SecretsManagerClient, GetSecretValueCommand } = require("@aws-sdk/client-secrets-manager");
+const env = require('dotenv');
+env.config();
 
 // Initialise Secrets Manager client
 const secretsManagerClient = new SecretsManagerClient({
-    region: "ap-southeast-2",
+    region: process.env.AWS_REGION || "ap-southeast-2",
 });
 
-// Secret Names
-const cognitioClientSecret = "n11795611-cognitoSecret-assessment2";
-const cognitioIdSecret = "n11795611-cognitoClientId-assessment2";
-const userPoolIdSecret = "n11795611-userPoolId-assessment2";
-const dynamoDBSecret = "n11795611-dynamoDBTableName-assessment2";
-const bucketSecret = "n11795611-bucketName-assessment2";
+// Secret Names - using environment variables with fallbacks
+const cognitioClientSecret = process.env.COGNITO_CLIENT_SECRET || "n11795611-cognitoSecret-assessment2";
+const cognitioIdSecret = process.env.COGNITO_CLIENT_ID_SECRET || "n11795611-cognitoClientId-assessment2";
+const userPoolIdSecret = process.env.USER_POOL_ID_SECRET || "n11795611-userPoolId-assessment2";
+const dynamoDBSecret = process.env.DYNAMODB_TABLE_SECRET || "n11795611-dynamoDBTableName-assessment2";
+const bucketSecret = process.env.S3_BUCKET_SECRET || "n11795611-bucketName-assessment2";
 
 const getCognitoClientSecret = async () => {
     let response;

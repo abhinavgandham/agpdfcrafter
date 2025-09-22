@@ -508,12 +508,12 @@ const createAdminUser = async (req, res) => {
  */
 const getUserDetails = async (username) => {
     const userPoolId = await getUserPoolId();
-    const userDetailsCommand = await new AdminGetUserCommand({
+    const userDetailsCommand = new AdminGetUserCommand({
         UserPoolId: userPoolId,
         Username: username
-    })
+    });
 
-    const userDetails = await cognitoClient.send(userDetailsCommand)
+    const userDetails = await cognitoClient.send(userDetailsCommand);
 
     return userDetails;
 }
@@ -605,7 +605,14 @@ const promoteToAdmin = async (req, res) => {
 
         const userDetails = await getUserDetails(username);
 
-        const email = userDetails.UserAttributes.find(attr => attr.Name === 'email').Value;
+        const emailAttr = userDetails.UserAttributes.find(attr => attr.Name === 'email');
+        if (!emailAttr) {
+            return res.status(400).json({
+                success: false,
+                message: 'User email not found'
+            });
+        }
+        const email = emailAttr.Value;
 
         const userPoolId = await getUserPoolId();
 
@@ -681,7 +688,14 @@ const demoteFromAdmin = async (req, res) => {
 
         const userDetails = await getUserDetails(username);
 
-        const email = userDetails.UserAttributes.find(attr => attr.Name === 'email').Value;
+        const emailAttr = userDetails.UserAttributes.find(attr => attr.Name === 'email');
+        if (!emailAttr) {
+            return res.status(400).json({
+                success: false,
+                message: 'User email not found'
+            });
+        }
+        const email = emailAttr.Value;
 
         const userPoolId = await getUserPoolId();
 
@@ -698,12 +712,18 @@ const demoteFromAdmin = async (req, res) => {
         });
         await cognitoClient.send(updateUserAttributesCommand);
 
+        // Send email before responding
+        try {
+            await sendDemotionEmail(username, email);
+        } catch (emailError) {
+            console.error('Email sending failed:', emailError);
+            // Continue anyway - don't fail the demotion if email fails
+        }
+
         res.status(200).json({
             success: true,
             message: 'User successfully demoted from admin.'
         });
-
-        await sendDemotionEmail(username, email);
     } catch (error) {
         console.error('Demote from admin error:', error);
 

@@ -1,7 +1,12 @@
 const { getUserJobs, getAllConversionJobs  } = require('../cloudservices/dynamodb');
 
 
- // Function that gets all jobs created, admin functionality
+/**
+ * Function that gets all jobs created, admin functionality
+ * @param {*} req - Request object
+ * @param {*} res - Response object
+ * @returns {Promise<void>} - Response object
+ */
 const getAllJobs = async (req, res) => {
     try {
         const { role } = req.user;
@@ -16,7 +21,12 @@ const getAllJobs = async (req, res) => {
     }
 };
 
-// Function that only gets the jobs created by the current logged in user
+/**
+ * Function that only gets the jobs created by the current logged in user
+ * @param {*} req - Request object
+ * @param {*} res - Response object
+ * @returns {Promise<void>} - Response object
+ */
 const getJobs = async (req, res) => {
     try {
         const { username } = req.user;
