@@ -5,6 +5,8 @@ const {
 } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 const { insertJob } = require("../cloudservices/dynamodb.js");
+const { getParameterValue } = require('../cloudservices/parameterStore');
+const s3DownloadExpiration = Number(getParameterValue('/n11795611-abhinavgandham-cab432/app/s3-download-expiration'));
 
 /**
  * Function to setup Puppeteer, which is used to convert html and md content to PDF.
@@ -267,7 +269,7 @@ const pushPdfDownloadUrlToS3 = async (pdfBuffer, uniquePdfName) => {
     });
     
     const downloadUrl = await getSignedUrl(s3Client, downloadCommand, { 
-      expiresIn: 3600 // 1 hour
+      expiresIn: s3DownloadExpiration
     });
     
     console.log(`✅ Presigned URL generated for: ${uniquePdfName}`);

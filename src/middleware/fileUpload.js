@@ -1,5 +1,7 @@
 const multer = require('multer');
 const path = require('path');
+const { getParameterValue } = require('../cloudservices/parameterStore');
+const uploadLimit = Number(getParameterValue('/n11795611-abhinavgandham-cab432/app/file-upload-limit'));
 
 // File filter for allowed file types
 const fileFilter = (req, file, callBack) => {
@@ -22,7 +24,7 @@ const uploadFile = multer({
     storage: multer.memoryStorage(),
     fileFilter: fileFilter,
     limits: {
-        fileSize: 100 * 1024 * 1024, // 100MB limit
+        fileSize: uploadLimit, // 100MB limit
         files: 1 // Only 1 file per request
     }
 })

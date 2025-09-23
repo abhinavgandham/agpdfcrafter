@@ -8,8 +8,7 @@ const userRoutes = require('./src/routes/userRoutes');
 const fs = require('fs');
 const path = require('path');
 const loadSwaggerDocument = require('./src/swagger.js');
-const { createBucket, tagBucket } = require('./src/cloudservices/bucket.js');
-const { initDynamoDB } = require('./src/cloudservices/dynamodb.js');
+const { setupConversionsDirectory } = require('./src/cloudservices/bucket.js');
 const app = express();
 
 env.config();
@@ -23,9 +22,8 @@ app.use('/api/file', fileRoutes);
 app.use('/api/job', jobRoutes);
 app.use('/api/user', userRoutes);
 
-createBucket()
-tagBucket()
-initDynamoDB()
+// Creating conversions directory in s3 bucket
+setupConversionsDirectory();
 
 // Load the swagger document and set up the UI
 const swaggerDocument = loadSwaggerDocument();

@@ -9,6 +9,106 @@ Parameters:
     Description: EC2 instance type
 
 Resources:
+  # S3 Bucket for PDF conversions
+  PDFConversionsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "pdfconversions-abhinav-n11795611"
+      Tags:
+        - Key: qut-username
+          Value: n11795611@qut.edu.au
+        - Key: purpose
+          Value: assessment 2
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteConversionsAfter48Hours
+            Status: Enabled
+            Prefix: conversions/
+            ExpirationInDays: 2
+
+  # DynamoDB Table for job tracking
+  ConversionJobsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "n11795611-abhinavgandham-conversions"
+      AttributeDefinitions:
+        - AttributeName: qut-username
+          AttributeType: S
+        - AttributeName: jobId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: qut-username
+          KeyType: HASH
+        - AttributeName: jobId
+          KeyType: RANGE
+      BillingMode: PROVISIONED
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+      Tags:
+        - Key: qut-username
+          Value: n11795611@qut.edu.au
+        - Key: purpose
+          Value: assessment 2
+
+  # Parameter Store Parameters
+  S3DownloadExpirationParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /n11795611-abhinavgandham-cab432/app/s3-download-expiration
+      Type: String
+      Value: "3600"
+      Description: S3 download URL expiration time in seconds
+
+  FileUploadLimitParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /n11795611-abhinavgandham-cab432/app/file-upload-limit
+      Type: String
+      Value: "104857600"
+      Description: Maximum file upload size in bytes (100MB)
+
+  # Secret Names in Parameter Store
+  CognitoClientSecretNameParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /n11795611-abhinavgandham-cab432/app/cognito-client-secret-name
+      Type: String
+      Value: "n11795611-cognitoSecret-assessment2"
+      Description: Name of the Cognito client secret in Secrets Manager
+
+  CognitoClientIdSecretNameParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /n11795611-abhinavgandham-cab432/app/cognito-client-id-secret-name
+      Type: String
+      Value: "n11795611-cognitoClientId-assessment2"
+      Description: Name of the Cognito client ID secret in Secrets Manager
+
+  UserPoolIdSecretNameParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /n11795611-abhinavgandham-cab432/app/user-pool-id-secret-name
+      Type: String
+      Value: "n11795611-userPoolId-assessment2"
+      Description: Name of the user pool ID secret in Secrets Manager
+
+  DynamoDBTableSecretNameParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /n11795611-abhinavgandham-cab432/app/dynamodb-table-secret-name
+      Type: String
+      Value: "n11795611-dynamoDBTableName-assessment2"
+      Description: Name of the DynamoDB table secret in Secrets Manager
+
+  S3BucketSecretNameParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /n11795611-abhinavgandham-cab432/app/s3-bucket-secret-name
+      Type: String
+      Value: "n11795611-bucketName-assessment2"
+      Description: Name of the S3 bucket secret in Secrets Manager
+
   # EC2 Instance
   MyEC2Instance:
     Type: AWS::EC2::Instance
@@ -23,8 +123,10 @@ Resources:
           GroupSet:
             - sg-032bd1ff8cf77dbb9
       Tags:
-        - Key: Name
-          Value: n11795611-abhinav-assessment2
+        - Key: qut-username
+          Value: n11795611@qut.edu.au
+        - Key: purpose
+          Value: assessment 2
       UserData:
         Fn::Base64: |
           #!/bin/bash
@@ -59,17 +161,19 @@ Outputs:
   InstanceId:
     Description: EC2 Instance ID
     Value: !Ref MyEC2Instance
-    Export:
-      Name: !Sub "${AWS::StackName}-InstanceId"
-  
+
   PublicIP:
     Description: Public IP address of the instance
     Value: !GetAtt MyEC2Instance.PublicIp
-    Export:
-      Name: !Sub "${AWS::StackName}-PublicIP"
-  
+
   ApplicationURL:
     Description: URL to access the application
     Value: !Sub "http://${MyEC2Instance.PublicIp}:3000"
-    Export:
-      Name: !Sub "${AWS::StackName}-ApplicationURL"
+
+  S3BucketName:
+    Description: S3 bucket name for PDF conversions
+    Value: !Ref PDFConversionsBucket
+
+  DynamoDBTableName:
+    Description: DynamoDB table name for conversion jobs
+    Value: !Ref ConversionJobsTable

@@ -2,65 +2,6 @@ const DynamoDB = require("@aws-sdk/client-dynamodb");
 const DynamoDBLib = require("@aws-sdk/lib-dynamodb");
 const { getDynamoDBSecret } = require("./secretsManager");
 
-const sortKey = 'jobId';
-
-
-/**
- * Function that initialises the DynamoDB table
- */
-async function initDynamoDB() {
-    const client = new DynamoDB.DynamoDBClient({ region: process.env.AWS_REGION || "ap-southeast-2" });
-  
-    const tableName = await getDynamoDBSecret();
-    console.log('Retrieved table name:', tableName);
-  
-    const describeCommand = new DynamoDB.DescribeTableCommand({
-      TableName: tableName
-    });
-    
-    // Boolean Variable to check if the table exists
-    const tableExists = await client.send(describeCommand).then(() => true).catch(() => false);
-    
-    // If the table exists, log a message
-    if (tableExists) {
-      console.log(`✅ Table ${tableName} already exists`);
-    } else {
-      console.log(`📝 Creating table ${tableName}...`);
-      
-      let command = new DynamoDB.CreateTableCommand({
-        TableName: tableName,
-        AttributeDefinitions: [
-          {
-            AttributeName: "qut-username",
-            AttributeType: "S",
-          },
-          {
-            AttributeName: sortKey,
-            AttributeType: "S",
-          },
-        ],
-        KeySchema: [
-          {
-            AttributeName: "qut-username",
-            KeyType: "HASH",
-          },
-          {
-            AttributeName: sortKey,
-            KeyType: "RANGE",
-          },
-        ],
-        ProvisionedThroughput: {
-          ReadCapacityUnits: 1,
-          WriteCapacityUnits: 1,
-        },
-      });
-      
-      await client.send(command);
-      console.log(`✅ Table ${tableName} created successfully`);
-    }
-}
-
-
 /**
  * Function that inserts a job into the DynamoDB table
  * @param {string} username - The QUT username
@@ -148,4 +89,4 @@ async function initDynamoDB() {
   };
 
 
-  module.exports = {initDynamoDB, insertJob, getUserJobs, getAllConversionJobs: getAllJobsFromDB}
+  module.exports = {insertJob, getUserJobs, getAllConversionJobs: getAllJobsFromDB}

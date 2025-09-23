@@ -1,4 +1,5 @@
 const { SecretsManagerClient, GetSecretValueCommand } = require("@aws-sdk/client-secrets-manager");
+const { getParameterValue } = require("./parameterStore");
 const env = require('dotenv');
 env.config();
 
@@ -7,18 +8,22 @@ const secretsManagerClient = new SecretsManagerClient({
     region: process.env.AWS_REGION || "ap-southeast-2",
 });
 
-// Secret Names - using environment variables with fallbacks
-const cognitioClientSecret = process.env.COGNITO_CLIENT_SECRET || "n11795611-cognitoSecret-assessment2";
-const cognitioIdSecret = process.env.COGNITO_CLIENT_ID_SECRET || "n11795611-cognitoClientId-assessment2";
-const userPoolIdSecret = process.env.USER_POOL_ID_SECRET || "n11795611-userPoolId-assessment2";
-const dynamoDBSecret = process.env.DYNAMODB_TABLE_SECRET || "n11795611-dynamoDBTableName-assessment2";
-const bucketSecret = process.env.S3_BUCKET_SECRET || "n11795611-bucketName-assessment2";
+// Get secret names from Parameter Store
+const getSecretName = async (paramName) => {
+    try {
+        return await getParameterValue(paramName);
+    } catch (error) {
+        console.error(`Error getting parameter ${paramName}:`, error);
+        throw error;
+    }
+};
 
 const getCognitoClientSecret = async () => {
     let response;
     try {
+        const secretName = await getSecretName('/n11795611-abhinavgandham-cab432/app/cognito-client-secret-name');
         response = await secretsManagerClient.send(new GetSecretValueCommand({
-            SecretId: cognitioClientSecret,
+            SecretId: secretName,
             VersionStage: "AWSCURRENT",
         }))
     } catch (error) {
@@ -37,8 +42,9 @@ const getCognitoClientSecret = async () => {
 const getCognitoIdSecret = async () => {
     let response;
     try {
+        const secretName = await getSecretName('/n11795611-abhinavgandham-cab432/app/cognito-client-id-secret-name');
         response = await secretsManagerClient.send(new GetSecretValueCommand({
-            SecretId: cognitioIdSecret,
+            SecretId: secretName,
             VersionStage: "AWSCURRENT",
         }))
     } catch (error) {
@@ -57,8 +63,9 @@ const getCognitoIdSecret = async () => {
 const getUserPoolIdSecret = async () => {
     let response;
     try {
+        const secretName = await getSecretName('/n11795611-abhinavgandham-cab432/app/user-pool-id-secret-name');
         response = await secretsManagerClient.send(new GetSecretValueCommand({
-            SecretId: userPoolIdSecret,
+            SecretId: secretName,
             VersionStage: "AWSCURRENT",
         }))
     } catch (error) {
@@ -78,8 +85,9 @@ const getUserPoolIdSecret = async () => {
 const getDynamoDBSecret = async () => {
     let response;
     try {
+        const secretName = await getSecretName('/n11795611-abhinavgandham-cab432/app/dynamodb-table-secret-name');
         response = await secretsManagerClient.send(new GetSecretValueCommand({
-            SecretId: dynamoDBSecret,
+            SecretId: secretName,
             VersionStage: "AWSCURRENT",
         }))
     } catch (error) {
@@ -98,8 +106,9 @@ const getDynamoDBSecret = async () => {
 const getBucketSecret = async () => {
     let response;
     try {
+        const secretName = await getSecretName('/n11795611-abhinavgandham-cab432/app/s3-bucket-secret-name');
         response = await secretsManagerClient.send(new GetSecretValueCommand({
-            SecretId: bucketSecret,
+            SecretId: secretName,
             VersionStage: "AWSCURRENT",
         }))
     } catch (error) {
