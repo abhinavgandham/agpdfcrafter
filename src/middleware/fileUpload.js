@@ -1,7 +1,18 @@
 const multer = require('multer');
 const path = require('path');
 const { getParameterValue } = require('../cloudservices/parameterStore');
-const uploadLimit = Number(getParameterValue('/n11795611-abhinavgandham-cab432/app/file-upload-limit'));
+
+let uploadLimit;
+
+// Get the upload limit parameter asynchronously
+getParameterValue('/n11795611-abhinavgandham-cab432/app/file-upload-limit')
+  .then(value => {
+    uploadLimit = Number(value);
+    console.log(`✅ Upload limit set to: ${uploadLimit} bytes`);
+  })
+  .catch(error => {
+    console.error('❌ Error getting upload limit parameter, using default:', error);
+  });
 
 // File filter for allowed file types
 const fileFilter = (req, file, callBack) => {

@@ -1,4 +1,4 @@
-const { CognitoIdentityProviderClient, ListUsersCommand } = require("@aws-sdk/client-cognito-identity-provider");
+const { CognitoIdentityProviderClient, ListUsersCommand, AdminListGroupsForUserCommand } = require("@aws-sdk/client-cognito-identity-provider");
 
 // Cognito configuration
 const userPoolId = "ap-southeast-2_8XCJUIAAd";
@@ -6,6 +6,21 @@ const userPoolId = "ap-southeast-2_8XCJUIAAd";
 const cognitoClient = new CognitoIdentityProviderClient({
     region: "ap-southeast-2",
 });
+
+// Helper function to check if user is in admin group
+const checkUserGroupMembership = async (username) => {
+    try {
+        const command = new AdminListGroupsForUserCommand({
+            UserPoolId: userPoolId,
+            Username: username
+        });
+        const result = await cognitoClient.send(command);
+        return result.Groups.some(group => group.GroupName === 'admin');
+    } catch (error) {
+        console.error('Error checking group membership:', error);
+        return false;
+    }
+};
 
 const getAllUsers = async (req, res) => {
     try {
@@ -22,20 +37,24 @@ const getAllUsers = async (req, res) => {
         const result = await cognitoClient.send(listUsersCommand);
 
         // Transform Cognito users to our format
-        const cleanUsers = result.Users.map((user, index) => {
+        const cleanUsers = await Promise.all(result.Users.map(async (user, index) => {
             const attributes = user.Attributes.reduce((acc, attr) => {
                 acc[attr.Name] = attr.Value;
                 return acc;
             }, {});
+
+            // Check if user is in admin group
+            const isAdmin = await checkUserGroupMembership(user.Username);
+            const userRole = isAdmin ? 'admin' : 'normal user';
 
             return {
                 id: index + 1, // Generate sequential ID since Cognito doesn't have numeric IDs
                 username: user.Username,
                 email: attributes.email || '',
                 fullName: attributes.name || user.Username,
-                role: attributes['custom:Role'] || 'normal user'
+                role: userRole
             };
-        });
+        }));
 
         // Sort users
         const { sortBy = 'id', order = 'asc' } = req.query;
@@ -86,12 +105,16 @@ const getUserById = async (req, res) => {
             return acc;
         }, {});
 
+        // Check if user is in admin group
+        const isAdmin = await checkUserGroupMembership(user.Username);
+        const userRole = isAdmin ? 'admin' : 'normal user';
+
         const cleanUser = {
             id: Number(id),
             username: user.Username,
             email: attributes.email || '',
             fullName: attributes.name || user.Username,
-            role: attributes['custom:Role'] || 'normal user'
+            role: userRole
         };
 
         return res.status(200).json(cleanUser);
@@ -102,4 +125,23 @@ const getUserById = async (req, res) => {
     }
 };
 
-module.exports = {getAllUsers, getUserById};
+const getCurrentUser = async (req, res) => {
+    try {
+        // Return the current user info from the authenticated request
+        const { id, username, email, role, fullName } = req.user;
+        
+        return res.status(200).json({
+            id: id,
+            username: username,
+            email: email,
+            fullName: fullName,
+            role: role
+        });
+
+    } catch (error) {
+        console.error('Error getting current user:', error);
+        return res.status(500).json({ message: "Internal Server Error." });
+    }
+};
+
+module.exports = {getAllUsers, getUserById, getCurrentUser};

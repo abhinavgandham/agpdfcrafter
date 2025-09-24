@@ -109,6 +109,23 @@ Resources:
       Value: "n11795611-bucketName-assessment2"
       Description: Name of the S3 bucket secret in Secrets Manager
 
+  # Cognito Groups
+  AdminGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      UserPoolId: ap-southeast-2_8XCJUIAAd  # Your existing User Pool ID
+      GroupName: admin
+      Description: Admin users group
+      Precedence: 1
+
+  NormalGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      UserPoolId: ap-southeast-2_8XCJUIAAd  # Your existing User Pool ID
+      GroupName: normal
+      Description: Normal users group
+      Precedence: 2
+
   # EC2 Instance
   MyEC2Instance:
     Type: AWS::EC2::Instance
@@ -130,20 +147,112 @@ Resources:
       UserData:
         Fn::Base64: |
           #!/bin/bash
-          # Update and install Docker and AWS CLI
-          apt-get update -y
-          apt-get install -y docker.io docker-compose awscli
+          set -e
+          
+          # Log everything for debugging
+          exec > >(tee /var/log/user-data.log) 2>&1
+          echo "Starting user data script at $(date)"
+          
+          # Kill any existing package operations to prevent conflicts
+          echo "Stopping any existing package operations..."
+          pkill -f apt-get || true
+          pkill -f dpkg || true
+          pkill -f unattended-upgrade || true
+          
+          # Disable unattended-upgrades to prevent conflicts
+          systemctl stop unattended-upgrades 2>/dev/null || true
+          systemctl disable unattended-upgrades 2>/dev/null || true
+          
+          # Clean up any existing locks
+          echo "Cleaning up any existing package locks..."
+          rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock
+          rm -f /var/cache/apt/archives/lock
+          
+          # Configure dpkg to handle interrupted installations
+          dpkg --configure -a || true
+          
+          # Enhanced package manager lock handling
+          echo "Checking for package manager locks..."
+          
+          # Function to wait for locks with timeout
+          wait_for_locks() {
+              local timeout=300  # 5 minutes timeout
+              local count=0
+              
+              while [ $count -lt $timeout ]; do
+                  if ! fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 && \
+                     ! fuser /var/lib/dpkg/lock >/dev/null 2>&1; then
+                      echo "Package manager is free, proceeding..."
+                      return 0
+                  fi
+                  echo "Waiting for package manager to finish... (${count}s/${timeout}s)"
+                  sleep 5
+                  count=$((count + 5))
+              done
+              
+              echo "Timeout waiting for package manager. Forcing unlock..."
+              # Force remove locks as last resort
+              rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock
+              dpkg --configure -a || true
+              return 1
+          }
+          
+          # Wait for locks to be released
+          wait_for_locks
+          
+          # Update and install Docker and AWS CLI with retry logic
+          echo "Updating package lists..."
+          for i in {1..3}; do
+              if apt-get update -y; then
+                  echo "Package lists updated successfully"
+                  break
+              else
+                  echo "Package update failed, attempt $i/3"
+                  if [ $i -eq 3 ]; then
+                      echo "Failed to update packages after 3 attempts"
+                      exit 1
+                  fi
+                  sleep 10
+              fi
+          done
+          
+          echo "Installing Docker and AWS CLI..."
+          for i in {1..3}; do
+              if apt-get install -y docker.io docker-compose awscli; then
+                  echo "Docker and AWS CLI installed successfully"
+                  break
+              else
+                  echo "Installation failed, attempt $i/3"
+                  if [ $i -eq 3 ]; then
+                      echo "Failed to install packages after 3 attempts"
+                      exit 1
+                  fi
+                  # Clean up and retry
+                  apt-get clean
+                  sleep 10
+              fi
+          done
+          
+          echo "Starting Docker service..."
           systemctl start docker
           systemctl enable docker
           usermod -aG docker ubuntu
-
-          # Login to ECR
-          aws ecr get-login-password --region ap-southeast-2 | docker login --username AWS --password-stdin 901444280953.dkr.ecr.ap-southeast-2.amazonaws.com
-
+          
+          # Wait a bit before ECR login
+          sleep 10
+          
+          echo "Logging into ECR..."
+          # Login to ECR with retry logic
+          for i in {1..3}; do
+              aws ecr get-login-password --region ap-southeast-2 | docker login --username AWS --password-stdin 901444280953.dkr.ecr.ap-southeast-2.amazonaws.com && break || sleep 10
+          done
+          
+          echo "Creating app directory..."
           # Create app directory
           mkdir -p /home/ubuntu/myapp
           cd /home/ubuntu/myapp
-
+          
+          echo "Creating docker-compose.yml..."
           # Create docker-compose.yml with proper YAML formatting
           cat > /home/ubuntu/myapp/docker-compose.yml << 'EOF'
           version: '3'
@@ -153,9 +262,12 @@ Resources:
               ports:
                 - "3000:3000"
           EOF
-
+          
+          echo "Starting Docker Compose..."
           # Run Docker Compose in detached mode
           docker-compose up -d
+          
+          echo "User data script completed at $(date)"
 
 Outputs:
   InstanceId:
@@ -177,3 +289,10 @@ Outputs:
   DynamoDBTableName:
     Description: DynamoDB table name for conversion jobs
     Value: !Ref ConversionJobsTable
+  AdminGroupName:
+    Description: Cognito admin group name
+    Value: !Ref AdminGroup
+
+  NormalGroupName:
+    Description: Cognito normal group name
+    Value: !Ref NormalGroup

@@ -176,7 +176,7 @@ const demoteUser = async(username) => {
   } 
 
 
-const getCurrentUserRole = () => {
+const getCurrentUserRole = async () => {
   try {
     // Get token from localStorage dynamically
     const currentToken = localStorage.getItem("token");
@@ -184,14 +184,17 @@ const getCurrentUserRole = () => {
       return 'normal user';
     }
     
-    // Decode the JWT token to get user role
-    const tokenParts = currentToken.split('.');
-    if (tokenParts.length === 3) {
-      const payload = JSON.parse(atob(tokenParts[1]));
-      return payload['custom:Role'] || 'normal user';
+    // Get current user info from backend to get the role
+    const response = await fetch("/api/user/getCurrentUser", {
+      headers: { Authorization: `Bearer ${currentToken}` },
+    });
+    
+    if (response.ok) {
+      const user = await response.json();
+      return user.role || 'normal user';
     }
   } catch (error) {
-    console.log("Could not decode token:", error);
+    console.log("Could not get current user role:", error);
   }
   return 'normal user'; // Default fallback
 };
@@ -205,8 +208,8 @@ export const displayAllUsers = async () => {
     return;
   }
  
-  // Get current user role from token
-  currentUserRole = getCurrentUserRole();
+  // Get current user role from backend
+  currentUserRole = await getCurrentUserRole();
 
   const response = await fetch("/api/user/getAllUsers", {
     headers: { Authorization: `Bearer ${currentToken}` },
@@ -234,8 +237,8 @@ export const displayUserById = async () => {
     return;
   }
 
-  // Get current user role from token
-  currentUserRole = getCurrentUserRole();
+  // Get current user role from backend
+  currentUserRole = await getCurrentUserRole();
 
   const response = await fetch(`/api/user/getUserById/${id}`, {
     headers: { Authorization: `Bearer ${currentToken}` },

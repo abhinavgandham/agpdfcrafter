@@ -3,7 +3,8 @@ const { CognitoIdentityProviderClient, SignUpCommand,
     ConfirmSignUpCommand, AdminUpdateUserAttributesCommand,
     AdminCreateUserCommand, AdminSetUserPasswordCommand,
     AdminGetUserCommand, RespondToAuthChallengeCommand, ChallengeNameType, AssociateSoftwareTokenCommand,
-    VerifySoftwareTokenCommand, AdminDeleteUserCommand} = require("@aws-sdk/client-cognito-identity-provider");
+    VerifySoftwareTokenCommand, AdminDeleteUserCommand, AdminAddUserToGroupCommand,
+    AdminRemoveUserFromGroupCommand, CreateGroupCommand, GetGroupCommand, ListGroupsForUserCommand} = require("@aws-sdk/client-cognito-identity-provider");
 const { SESClient, SendEmailCommand } = require("@aws-sdk/client-ses");
 const jwt = require("aws-jwt-verify");
 const crypto = require("crypto");
@@ -65,6 +66,107 @@ const createIdVerifier = async () => {
         tokenUse: "id",
         clientId: clientId,
     });
+};
+
+/**
+ * Function to ensure admin group exists in Cognito.
+ * @returns {Promise<void>}
+ */
+const ensureAdminGroupExists = async () => {
+    try {
+        const userPoolId = await getUserPoolId();
+        
+        // Try to get the group first
+        try {
+            const getGroupCommand = new GetGroupCommand({
+                UserPoolId: userPoolId,
+                GroupName: 'admin'
+            });
+            await cognitoClient.send(getGroupCommand);
+            console.log('Admin group already exists');
+        } catch (error) {
+            // Group doesn't exist, create it
+            if (error.name === 'ResourceNotFoundException') {
+                const createGroupCommand = new CreateGroupCommand({
+                    UserPoolId: userPoolId,
+                    GroupName: 'admin',
+                    Description: 'Admin users group'
+                });
+                await cognitoClient.send(createGroupCommand);
+                console.log('Admin group created successfully');
+            } else {
+                throw error;
+            }
+        }
+    } catch (error) {
+        console.error('Error ensuring admin group exists:', error);
+        throw error;
+    }
+};
+
+/**
+ * Function to ensure normal group exists in Cognito.
+ * @returns {Promise<void>}
+ */
+const ensureNormalGroupExists = async () => {
+    try {
+        const userPoolId = await getUserPoolId();
+        
+        // Try to get the group first
+        try {
+            const getGroupCommand = new GetGroupCommand({
+                UserPoolId: userPoolId,
+                GroupName: 'normal'
+            });
+            await cognitoClient.send(getGroupCommand);
+            console.log('Normal group already exists');
+        } catch (error) {
+            // Group doesn't exist, create it
+            if (error.name === 'ResourceNotFoundException') {
+                const createGroupCommand = new CreateGroupCommand({
+                    UserPoolId: userPoolId,
+                    GroupName: 'normal',
+                    Description: 'Normal users group'
+                });
+                await cognitoClient.send(createGroupCommand);
+                console.log('Normal group created successfully');
+            } else {
+                throw error;
+            }
+        }
+    } catch (error) {
+        console.error('Error ensuring normal group exists:', error);
+        throw error;
+    }
+};
+
+/**
+ * Function to check if a user is a member of a specific group.
+ * @param {string} username - The username to check
+ * @param {string} groupName - The group name to check
+ * @returns {Promise<boolean>} - True if user is in the group, false otherwise
+ */
+const checkUserGroupMembership = async (username, groupName) => {
+    try {
+        const userPoolId = await getUserPoolId();
+        console.log(`Checking if user ${username} is in group ${groupName} in pool ${userPoolId}`);
+        
+        const listGroupsForUserCommand = new ListGroupsForUserCommand({
+            UserPoolId: userPoolId,
+            Username: username
+        });
+        
+        const result = await cognitoClient.send(listGroupsForUserCommand);
+        console.log(`User ${username} is in groups:`, result.Groups.map(g => g.GroupName));
+        
+        const isInGroup = result.Groups.some(group => group.GroupName === groupName);
+        console.log(`User ${username} is in group ${groupName}: ${isInGroup}`);
+        
+        return isInGroup;
+    } catch (error) {
+        console.error('Error checking group membership:', error);
+        return false;
+    }
 };
 
 /**
@@ -603,44 +705,75 @@ const promoteToAdmin = async (req, res) => {
             });
         }
 
-        const userDetails = await getUserDetails(username);
+        // const userDetails = await getUserDetails(username);
 
-        const emailAttr = userDetails.UserAttributes.find(attr => attr.Name === 'email');
-        if (!emailAttr) {
-            return res.status(400).json({
-                success: false,
-                message: 'User email not found'
-            });
-        }
-        const email = emailAttr.Value;
+        // const emailAttr = userDetails.UserAttributes.find(attr => attr.Name === 'email');
+        // if (!emailAttr) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: 'User email not found'
+        //     });
+        // }
+        // const email = emailAttr.Value;
 
         const userPoolId = await getUserPoolId();
 
-        // Update user's role to admin in Cognito
-        const updateUserAttributesCommand = new AdminUpdateUserAttributesCommand({
+        // Admin group is created by CloudFormation
+
+        // NEW APPROACH: Add user to admin group using AdminAddUserToGroup (which you have permission for)
+        const addUserToGroupCommand = new AdminAddUserToGroupCommand({
             UserPoolId: userPoolId,
             Username: username,
-            UserAttributes: [
-                {
-                    Name: 'custom:Role',
-                    Value: 'admin'
-                }
-            ]
+            GroupName: 'admin'
         });
 
-        await cognitoClient.send(updateUserAttributesCommand);
+        await cognitoClient.send(addUserToGroupCommand);
 
-        // Send email before responding
+        // OLD APPROACH: Update user's role to admin in Cognito (commented out)
+        // const updateUserAttributesCommand = new AdminUpdateUserAttributesCommand({
+        //     UserPoolId: userPoolId,
+        //     Username: username,
+        //     UserAttributes: [
+        //         {
+        //             Name: 'custom:Role',
+        //             Value: 'admin'
+        //         }
+        //     ]
+        // });
+        // await cognitoClient.send(updateUserAttributesCommand);
+
+        // Skip updating custom:Role attribute since we don't have AdminUpdateUserAttributes permission
+        // const updateUserAttributesCommand = new AdminUpdateUserAttributesCommand({
+        //     UserPoolId: userPoolId,
+        //     Username: username,
+        //     UserAttributes: [
+        //         {
+        //             Name: 'custom:Role',
+        //             Value: 'admin'
+        //         }
+        //     ]
+        // });
+        // await cognitoClient.send(updateUserAttributesCommand);
+
+        // Skip email sending since we don't have AdminGetUser permission to get email
+        // try {
+        //     await sendPromotionEmail(username, email);
+        // } catch (emailError) {
+        //     console.error('Email sending failed:', emailError);
+        //     // Continue anyway - don't fail the promotion if email fails
+        // }
+
+        // Test if we can check group membership for the promoted user
         try {
-            await sendPromotionEmail(username, email);
-        } catch (emailError) {
-            console.error('Email sending failed:', emailError);
-            // Continue anyway - don't fail the promotion if email fails
+            const isAdmin = await checkUserGroupMembership(username, 'admin');
+            console.log(`After promotion, user ${username} is admin: ${isAdmin}`);
+        } catch (error) {
+            console.error('Error testing group membership after promotion:', error);
         }
 
         res.status(200).json({
             success: true,
-            message: 'User promoted to admin successfully'
+            message: 'User promoted to admin successfully. Please log out and log back in to see the updated role.'
         });
 
     } catch (error) {
@@ -686,31 +819,61 @@ const demoteFromAdmin = async (req, res) => {
             });
         }
 
-        const userDetails = await getUserDetails(username);
+        // const userDetails = await getUserDetails(username);
 
-        const emailAttr = userDetails.UserAttributes.find(attr => attr.Name === 'email');
-        if (!emailAttr) {
-            return res.status(400).json({
-                success: false,
-                message: 'User email not found'
-            });
-        }
-        const email = emailAttr.Value;
+        // const emailAttr = userDetails.UserAttributes.find(attr => attr.Name === 'email');
+        // if (!emailAttr) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: 'User email not found'
+        //     });
+        // }
+        // const email = emailAttr.Value;
 
         const userPoolId = await getUserPoolId();
 
-        // Update user's role to normal user in Cognito
-        const updateUserAttributesCommand = new AdminUpdateUserAttributesCommand({
+        // Normal group is created by CloudFormation
+
+        // NEW APPROACH: Remove user from admin group and add to normal group
+        const removeUserFromGroupCommand = new AdminRemoveUserFromGroupCommand({
             UserPoolId: userPoolId,
             Username: username,
-            UserAttributes: [
-                {
-                    Name: 'custom:Role',
-                    Value: 'normal user'
-                }
-            ]
+            GroupName: 'admin'
         });
-        await cognitoClient.send(updateUserAttributesCommand);
+        await cognitoClient.send(removeUserFromGroupCommand);
+
+        const addUserToNormalGroupCommand = new AdminAddUserToGroupCommand({
+            UserPoolId: userPoolId,
+            Username: username,
+            GroupName: 'normal'
+        });
+        await cognitoClient.send(addUserToNormalGroupCommand);
+
+        // OLD APPROACH: Update user's role to normal user in Cognito (commented out)
+        // const updateUserAttributesCommand = new AdminUpdateUserAttributesCommand({
+        //     UserPoolId: userPoolId,
+        //     Username: username,
+        //     UserAttributes: [
+        //         {
+        //             Name: 'custom:Role',
+        //             Value: 'normal user'
+        //         }
+        //     ]
+        // });
+        // await cognitoClient.send(updateUserAttributesCommand);
+
+        // Skip updating custom:Role attribute since we don't have AdminUpdateUserAttributes permission
+        // const updateUserAttributesCommand = new AdminUpdateUserAttributesCommand({
+        //     UserPoolId: userPoolId,
+        //     Username: username,
+        //     UserAttributes: [
+        //         {
+        //             Name: 'custom:Role',
+        //             Value: 'normal user'
+        //         }
+        //     ]
+        // });
+        // await cognitoClient.send(updateUserAttributesCommand);
 
         // Send email before responding
         try {
@@ -722,7 +885,7 @@ const demoteFromAdmin = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            message: 'User successfully demoted from admin.'
+            message: 'User successfully demoted from admin. Please log out and log back in to see the updated role.'
         });
     } catch (error) {
         console.error('Demote from admin error:', error);
@@ -748,5 +911,6 @@ module.exports = {
     createAdminUser,
     promoteToAdmin,
     demoteFromAdmin,
-    verifyMFA
+    verifyMFA,
+    checkUserGroupMembership
 };
