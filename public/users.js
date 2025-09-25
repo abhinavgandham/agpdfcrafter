@@ -119,6 +119,7 @@ const promoteUser = async (username) => {
       body: JSON.stringify({ username }),
     });
 
+
     const data = await response.json();
 
     if (response.ok) {
@@ -153,6 +154,7 @@ const demoteUser = async(username) => {
       },
       body: JSON.stringify({ username }),
     });
+
 
     const data = await response.json();
 
@@ -215,11 +217,6 @@ export const displayAllUsers = async () => {
     headers: { Authorization: `Bearer ${currentToken}` },
   });
 
-  if (!response.ok) {
-    displayArea.innerHTML = "❌ Failed to fetch users";
-    setTimeout(() => displayArea.innerHTML = "", 5000);
-    return;
-  }
 
   const users = await response.json();
   renderTable(users, true);
@@ -244,11 +241,9 @@ export const displayUserById = async () => {
     headers: { Authorization: `Bearer ${currentToken}` },
   });
 
+
   if (response.status === 404) {
     displayArea.innerHTML = "❌ Could not find the user";
-    setTimeout(() => displayArea.innerHTML = "", 5000);
-  } else if (!response.ok) {
-    displayArea.innerHTML = "❌ An Unexpected error occured.";
     setTimeout(() => displayArea.innerHTML = "", 5000);
   } else {
     const user = await response.json();

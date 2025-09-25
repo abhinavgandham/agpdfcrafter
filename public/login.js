@@ -235,6 +235,7 @@ const createMainInterface = async (userRole, username) => {
   getUserByIdButton.textContent = "Get a user by id";
   getUserByIdButton.addEventListener("click", displayUserById);
 
+
   // Adding a clear button to clear jobs
   const clearDisplayAreaButton = document.createElement("button");
   clearDisplayAreaButton.id = "clearDisplayArea";

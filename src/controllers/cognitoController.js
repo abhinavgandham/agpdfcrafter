@@ -4,7 +4,7 @@ const { CognitoIdentityProviderClient, SignUpCommand,
     AdminCreateUserCommand, AdminSetUserPasswordCommand,
     AdminGetUserCommand, RespondToAuthChallengeCommand, ChallengeNameType, AssociateSoftwareTokenCommand,
     VerifySoftwareTokenCommand, AdminDeleteUserCommand, AdminAddUserToGroupCommand,
-    AdminRemoveUserFromGroupCommand, CreateGroupCommand, GetGroupCommand, ListGroupsForUserCommand} = require("@aws-sdk/client-cognito-identity-provider");
+    AdminRemoveUserFromGroupCommand, CreateGroupCommand, GetGroupCommand, AdminListGroupsForUserCommand} = require("@aws-sdk/client-cognito-identity-provider");
 const { SESClient, SendEmailCommand } = require("@aws-sdk/client-ses");
 const jwt = require("aws-jwt-verify");
 const crypto = require("crypto");
@@ -151,7 +151,7 @@ const checkUserGroupMembership = async (username, groupName) => {
         const userPoolId = await getUserPoolId();
         console.log(`Checking if user ${username} is in group ${groupName} in pool ${userPoolId}`);
         
-        const listGroupsForUserCommand = new ListGroupsForUserCommand({
+        const listGroupsForUserCommand = new AdminListGroupsForUserCommand({
             UserPoolId: userPoolId,
             Username: username
         });
@@ -377,6 +377,21 @@ const login = async (req, res) => {
         
         const idVerifier = await createIdVerifier();
         const idTokenVerifyResult = await idVerifier.verify(result.AuthenticationResult.IdToken);
+        
+        // Check user's role by looking at group membership
+        let role = 'normal user'; // default
+        
+        try {
+            const isAdmin = await checkUserGroupMembership(idTokenVerifyResult['cognito:username'], 'admin');
+            if (isAdmin) {
+                role = 'admin';
+            }
+        } catch (error) {
+            console.error('Error checking group membership during login:', error);
+            // Fall back to custom:Role attribute if group check fails
+            role = idTokenVerifyResult['custom:Role'] || 'normal user';
+        }
+
         res.status(200).json({
             success: true,
             message: 'Login successful',
@@ -385,7 +400,7 @@ const login = async (req, res) => {
                     id: idTokenVerifyResult.sub,
                     username: idTokenVerifyResult['cognito:username'],
                     email: idTokenVerifyResult.email,
-                    role: idTokenVerifyResult['custom:Role'] || 'normal user',
+                    role: role,
                     fullName: idTokenVerifyResult.name
                 },
                 tokens: {
@@ -456,7 +471,21 @@ const verifyMFA = async (req, res) => {
         if (result.AuthenticationResult) {
             // MFA verification successful
             const idVerifier = await createIdVerifier();
-        const idTokenVerifyResult = await idVerifier.verify(result.AuthenticationResult.IdToken);
+            const idTokenVerifyResult = await idVerifier.verify(result.AuthenticationResult.IdToken);
+            
+            // Check user's role by looking at group membership
+            let role = 'normal user'; // default
+            
+            try {
+                const isAdmin = await checkUserGroupMembership(idTokenVerifyResult['cognito:username'], 'admin');
+                if (isAdmin) {
+                    role = 'admin';
+                }
+            } catch (error) {
+                console.error('Error checking group membership during MFA verification:', error);
+                // Fall back to custom:Role attribute if group check fails
+                role = idTokenVerifyResult['custom:Role'] || 'normal user';
+            }
             
             res.status(200).json({
                 success: true,
@@ -466,7 +495,7 @@ const verifyMFA = async (req, res) => {
                         id: idTokenVerifyResult.sub,
                         username: idTokenVerifyResult['cognito:username'],
                         email: idTokenVerifyResult.email,
-                        role: idTokenVerifyResult['custom:Role'] || 'normal user',
+                        role: role,
                         fullName: idTokenVerifyResult.name
                     },
                     tokens: {
@@ -903,6 +932,7 @@ const demoteFromAdmin = async (req, res) => {
         });
     }
 };
+
 
 module.exports = {
     register,
