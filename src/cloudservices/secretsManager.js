@@ -8,7 +8,11 @@ const secretsManagerClient = new SecretsManagerClient({
     region: process.env.AWS_REGION || "ap-southeast-2",
 });
 
-// Get secret names from Parameter Store
+/**
+ * Function to get the secret name from the parameter store.
+ * @param {*} paramName 
+ * @returns {Promise<string>} - The secret name.
+ */
 const getSecretName = async (paramName) => {
     try {
         return await getParameterValue(paramName);
@@ -18,6 +22,11 @@ const getSecretName = async (paramName) => {
     }
 };
 
+
+/**
+ * Function to get the Cognito client secret from the secrets manager.
+ * @returns {Promise<string>} - The Cognito client secret.
+ */
 const getCognitoClientSecret = async () => {
     let response;
     try {
@@ -39,6 +48,11 @@ const getCognitoClientSecret = async () => {
     return secret.cognitoSecret;
 }
 
+
+/**
+ * Function to get the Cognito client ID from the secrets manager.
+ * @returns {Promise<string>} - The Cognito client ID.
+ */
 const getCognitoIdSecret = async () => {
     let response;
     try {
@@ -60,6 +74,11 @@ const getCognitoIdSecret = async () => {
     return secret.cognitoClientId;
 }
 
+
+/**
+ * Function to get the user pool ID from the secrets manager.
+ * @returns {Promise<string>} - The user pool ID.
+ */
 const getUserPoolIdSecret = async () => {
     let response;
     try {
@@ -82,6 +101,10 @@ const getUserPoolIdSecret = async () => {
 }
 
 
+/**
+ * Function to get the DynamoDB table name from the secrets manager.
+ * @returns {Promise<string>} - The DynamoDB table name.
+ */
 const getDynamoDBSecret = async () => {
     let response;
     try {
@@ -103,6 +126,11 @@ const getDynamoDBSecret = async () => {
     return secret.tableName;
 }
 
+
+/**
+ * Function to get the S3 bucket name from the secrets manager.
+ * @returns {Promise<string>} - The S3 bucket name.
+ */
 const getBucketSecret = async () => {
     let response;
     try {

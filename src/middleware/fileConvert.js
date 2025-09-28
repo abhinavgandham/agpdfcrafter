@@ -13,6 +13,7 @@ const { getParameterValue } = require('../cloudservices/parameterStore');
  * @returns {Promise<{browser: Browser, page: Page}>} - The browser and page.
  */
 const setupPuppeteer = async (content) => {
+  // Setting up puppeteer launch settings.
   const browser = await puppeteer.launch({
     headless: "new",
     args: [
@@ -274,10 +275,10 @@ const pushPdfDownloadUrlToS3 = async (pdfBuffer, uniquePdfName) => {
       expiresIn: s3DownloadExpiration
     });
     
-    console.log(`✅ Presigned URL generated for: ${uniquePdfName}`);
+    console.log(`Presigned URL generated for: ${uniquePdfName}`);
     return { success: true, message: 'PDF uploaded to S3', downloadUrl };
   } catch (error) {
-    console.error('❌ S3 upload error:', error);
+    console.error('S3 upload error:', error);
     return { success: false, error: error.message };
   }
 }
@@ -330,7 +331,7 @@ const handleFileConvert = async (req, res) => {
     const s3Result = await pushPdfDownloadUrlToS3(pdfBuffer, uniquePdfName);
     const downloadUrl = s3Result.success ? s3Result.downloadUrl : `/api/file/download/${uniquePdfName}`;
 
-    // Create job record in DynamoDB BEFORE sending response
+    // Create job record in DynamoDB
     try {
       const username = req.user ? req.user.username : "anonymous";
       const jobId = `${username}-${fileExtension}-${timestamp}`;

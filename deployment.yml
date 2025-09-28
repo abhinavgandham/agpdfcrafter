@@ -113,7 +113,7 @@ Resources:
   AdminGroup:
     Type: AWS::Cognito::UserPoolGroup
     Properties:
-      UserPoolId: ap-southeast-2_8XCJUIAAd  # Your existing User Pool ID
+      UserPoolId: ap-southeast-2_8XCJUIAAd
       GroupName: admin
       Description: Admin users group
       Precedence: 1
@@ -121,7 +121,7 @@ Resources:
   NormalGroup:
     Type: AWS::Cognito::UserPoolGroup
     Properties:
-      UserPoolId: ap-southeast-2_8XCJUIAAd  # Your existing User Pool ID
+      UserPoolId: ap-southeast-2_8XCJUIAAd
       GroupName: normal
       Description: Normal users group
       Precedence: 2
@@ -141,34 +141,6 @@ Resources:
           Value: 'true'
       MessageAction: SUPPRESS
 
-  AdminUser2:
-    Type: AWS::Cognito::UserPoolUser
-    Properties:
-      UserPoolId: ap-southeast-2_8XCJUIAAd
-      Username: admin1754
-      UserAttributes:
-        - Name: email
-          Value: abhinavgandham+test6@gmail.com
-        - Name: name
-          Value: Admin
-        - Name: email_verified
-          Value: 'true'
-      MessageAction: SUPPRESS
-
-  AdminUser3:
-    Type: AWS::Cognito::UserPoolUser
-    Properties:
-      UserPoolId: ap-southeast-2_8XCJUIAAd
-      Username: admin234
-      UserAttributes:
-        - Name: email
-          Value: abhinavgandham+test7@gmail.com
-        - Name: name
-          Value: Admin
-        - Name: email_verified
-          Value: 'true'
-      MessageAction: SUPPRESS
-
   # Admin User Group Memberships
   AdminUser1GroupMembership:
     Type: AWS::Cognito::UserPoolUserToGroupAttachment
@@ -176,22 +148,6 @@ Resources:
     Properties:
       UserPoolId: ap-southeast-2_8XCJUIAAd
       Username: abhiAdmin
-      GroupName: admin
-
-  AdminUser2GroupMembership:
-    Type: AWS::Cognito::UserPoolUserToGroupAttachment
-    DependsOn: AdminUser2
-    Properties:
-      UserPoolId: ap-southeast-2_8XCJUIAAd
-      Username: admin1754
-      GroupName: admin
-
-  AdminUser3GroupMembership:
-    Type: AWS::Cognito::UserPoolUserToGroupAttachment
-    DependsOn: AdminUser3
-    Properties:
-      UserPoolId: ap-southeast-2_8XCJUIAAd
-      Username: admin234
       GroupName: admin
 
   # EC2 Instance

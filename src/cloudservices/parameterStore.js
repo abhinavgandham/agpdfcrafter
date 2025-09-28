@@ -5,6 +5,11 @@ const ssmClient = new SSMClient({
     region: process.env.AWS_REGION || "ap-southeast-2",
 });
 
+/**
+ * Function to get the parameter value from the parameter store.
+ * @param {string} paramName - The name of the parameter.
+ * @returns {Promise<string>} - The parameter value.
+ */
 const getParameterValue = async (paramName) => {
     console.log(`🔍 Attempting to get parameter: ${paramName}`);
     console.log(`🔍 Using region: ${process.env.AWS_REGION || "ap-southeast-2"}`);

@@ -2,6 +2,12 @@ const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { conversionsPrefix } = require('../cloudservices/bucket.js');
 
+/**
+ * Function to download the converted file from s3.
+ * @param {*} req - Request object
+ * @param {*} res - Response object
+ * @returns {Promise<void>} - Response object containing the s3 presigneddownload URL.
+ */
 const download = async (req, res) => {
     try {
         const { filename } = req.params;

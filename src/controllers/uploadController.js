@@ -1,3 +1,9 @@
+/**
+ * Function to upload a file to the server.
+ * @param {*} req - Request object
+ * @param {*} res - Response object
+ * @returns {Promise<void>} - Response object containing the file information.
+ */
 const upload = async (req, res) => {
     try {
         // Getting the file from the request object

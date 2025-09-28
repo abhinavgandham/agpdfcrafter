@@ -7,7 +7,11 @@ const cognitoClient = new CognitoIdentityProviderClient({
     region: "ap-southeast-2",
 });
 
-// Helper function to check if user is in admin group
+/**
+ * Function to check iff the user is in the admin group.
+ * @param {*} username 
+ * @returns {Promise<boolean>} - True if user is in the admin group, false otherwise
+ */
 const checkUserGroupMembership = async (username) => {
     try {
         const command = new AdminListGroupsForUserCommand({
@@ -22,6 +26,13 @@ const checkUserGroupMembership = async (username) => {
     }
 };
 
+
+/**
+ * Function to get all users in the application.
+ * @param {*} req - Request object
+ * @param {*} res - Response object
+ * @returns {Promise<void>} - Response object containing the users.
+ */
 const getAllUsers = async (req, res) => {
     try {
         const { role } = req.user;
@@ -75,6 +86,12 @@ const getAllUsers = async (req, res) => {
 };
 
 
+/**
+ * Function to get a user by their ID.
+ * @param {*} req - Request object
+ * @param {*} res - Response object
+ * @returns {Promise<void>} - Response object containing the user.
+ */
 const getUserById = async (req, res) => {
     try {
         const { role } = req.user;
@@ -125,6 +142,13 @@ const getUserById = async (req, res) => {
     }
 };
 
+
+/**
+ * Function to get the current user.
+ * @param {*} req - Request object
+ * @param {*} res - Response object
+ * @returns {Promise<void>} - Response object containing the current loged in user..
+ */
 const getCurrentUser = async (req, res) => {
     try {
         // Return the current user info from the authenticated request

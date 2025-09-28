@@ -13,8 +13,6 @@ const login = async () => {
   const password = document.querySelector("#loginPassword").value;
   const messageDiv = document.querySelector("#message");
   const currentUserDiv = document.querySelector("#currentUser");
-  const jobsSection = document.querySelector("#jobs");
-  const displayArea = document.querySelector("#InformationDisplayArea");
 
   if (!username || !password) {
     messageDiv.innerHTML = "Please enter a username and password";
@@ -50,7 +48,6 @@ const login = async () => {
       currentUserDiv.innerHTML = `Logged in as ${username}: ${data.data.user.role}`;
       
       // Create UI elements
-      
       await createMainInterface(role, username);
     } else {
       messageDiv.innerHTML = "❌ Invalid username or password";

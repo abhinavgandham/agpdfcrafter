@@ -4,12 +4,19 @@ const cognitoClient = new CognitoIdentityProviderClient({
     region: "ap-southeast-2",
 });
 
+/**
+ * Function to logout the user from the application.
+ * @param {*} req - Request object
+ * @param {*} res - Response object
+ * @returns {Promise<void>} - Response object containing the logout status.
+ */
 const logout = async (req, res) => {
     try {
         // Get the access token from the request
         const authHeader = req.headers['authorization'];
         const accessToken = authHeader && authHeader.split(' ')[1];
 
+        // Checking if the access token is not present in the request header.
         if (!accessToken) {
             return res.status(400).json({
                 success: false,
